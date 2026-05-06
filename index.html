@@ -57,6 +57,10 @@
     .stat-item { text-align: center; }
     .stat-label { font-size: 0.9rem; color: var(--muted); margin-bottom: 5px; }
     .stat-value { font-size: 2rem; font-weight: bold; }
+    .stat-row { display: flex; justify-content: center; gap: 30px; margin-bottom: 15px; }
+    .stat-row-item { text-align: center; }
+    .stat-row-label { color: var(--muted); font-size: 0.9rem; }
+    .stat-row-value { font-size: 1.5rem; font-weight: bold; }
     .streak-badge {
         background: var(--red);
         color: white;
@@ -65,9 +69,8 @@
         font-weight: bold;
         font-size: 0.9rem;
     }
-    .progress-msg { margin-top: 10px; font-size: 0.95rem; }
+    .progress-msg { margin-top: 10px; font-size: 0.95rem; text-align: center; }
     canvas { background: #1b2733; border-radius: 8px; margin-top: 10px; }
-    /* 热力图 */
     .heatmap { display: flex; flex-direction: column; gap: 6px; }
     .month-row { display: flex; align-items: center; }
     .month-label { width: 35px; font-size: 0.8rem; color: var(--muted); }
@@ -78,7 +81,18 @@
         background: #2b3a4a;
     }
     .day-cell.today { outline: 2px solid white; }
-    /* 响应式 */
+
+    /* 历史记录表格样式 */
+    .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .history-table th, .history-table td {
+        padding: 8px 6px;
+        text-align: center;
+        border-bottom: 1px solid #2b3a4a;
+    }
+    .history-table th { color: var(--muted); font-weight: normal; font-size: 0.85rem; }
+    .history-table td { font-size: 1rem; }
+    .no-records { color: var(--muted); text-align: center; padding: 10px; }
+
     @media (max-width: 600px) {
         .stat-grid { grid-template-columns: 1fr 1fr; }
         input { width: 80px; }
@@ -105,6 +119,16 @@
                 <div class="stat-value" id="todayKd">-</div>
             </div>
         </div>
+        <div class="stat-row">
+            <div class="stat-row-item">
+                <div class="stat-row-label">总击杀</div>
+                <div class="stat-row-value" id="todayKills">0</div>
+            </div>
+            <div class="stat-row-item">
+                <div class="stat-row-label">总死亡</div>
+                <div class="stat-row-value" id="todayDeaths">0</div>
+            </div>
+        </div>
         <div id="goalProgress" class="progress-msg"></div>
     </div>
 </div>
@@ -123,6 +147,14 @@
         </div>
     </div>
     <button id="addMatchBtn" style="width:100%; padding:14px;">➕ 记录本局</button>
+</div>
+
+<!-- 今日记录列表（新增） -->
+<div class="card">
+    <h2 style="font-size:1.3rem; margin-bottom:10px;">📜 今日记录</h2>
+    <div id="historyContainer">
+        <p class="no-records">暂无记录</p>
+    </div>
 </div>
 
 <!-- 每日目标卡片 -->
@@ -149,46 +181,77 @@
 
 <script>
     // ---------- 数据存储 ----------
-    // 每日汇总数据: { date: "2026-05-06", matches: 12, kills: 240, deaths: 180 }
-    const DAILY_KEY = 'aimlog_daily';
+    const MATCHES_KEY = 'aimlog_matches';       // 新版：单局记录数组
     const GOAL_KEY = 'aimlog_goal';
 
-    let dailyData = JSON.parse(localStorage.getItem(DAILY_KEY) || '{}');
-    let goal = JSON.parse(localStorage.getItem(GOAL_KEY)) || { matches: 20, kd: 1.2 };
+    let matches = [];   // { date, time: ISO string, kills, deaths }
+    let goal = { matches: 20, kd: 1.2 };
+
+    // 加载数据（含迁移）
+    function loadData() {
+        // 先尝试加载新格式
+        const savedMatches = localStorage.getItem(MATCHES_KEY);
+        if (savedMatches) {
+            matches = JSON.parse(savedMatches);
+            return;
+        }
+        // 尝试迁移旧版 dailyData
+        const oldDaily = localStorage.getItem('aimlog_daily');
+        if (oldDaily) {
+            const dailyData = JSON.parse(oldDaily);
+            // 将旧数据转为单局记录（每天一条汇总记录）
+            for (const [date, record] of Object.entries(dailyData)) {
+                matches.push({
+                    date: date,
+                    time: date + 'T00:00:00.000Z',  // 默认零点
+                    kills: record.kills,
+                    deaths: record.deaths,
+                    consolidated: true   // 标记为旧汇总数据
+                });
+            }
+            // 保存新格式并清除旧数据（可选）
+            localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
+            localStorage.removeItem('aimlog_daily');
+            return;
+        }
+        // 无数据则空
+        matches = [];
+    }
+
+    // 加载目标
+    function loadGoal() {
+        const savedGoal = localStorage.getItem(GOAL_KEY);
+        if (savedGoal) goal = JSON.parse(savedGoal);
+    }
+
+    loadData();
+    loadGoal();
 
     // ---------- 工具函数 ----------
     const todayStr = () => new Date().toISOString().slice(0,10);
-    const formatDateShort = (d) => d.slice(5);
+    const formatDateShort = (d) => d.slice(5);  // MM-DD
 
-    // 获取今日记录（对象）或 null
-    function getToday() {
-        const t = todayStr();
-        return dailyData[t] || null;
+    // 获取今日所有记录
+    function getTodayMatches() {
+        const today = todayStr();
+        return matches.filter(m => m.date === today);
     }
 
-    // 保存今日记录
-    function saveToday(record) {
-        dailyData[todayStr()] = record;
-        localStorage.setItem(DAILY_KEY, JSON.stringify(dailyData));
-    }
-
-    // 计算K/D
-    function calcKD(kills, deaths) {
-        if (deaths === 0) return kills;
-        return parseFloat((kills / deaths).toFixed(2));
-    }
-
-    // 今日统计
+    // 计算今日汇总统计
     function getTodayStats() {
-        const t = getToday();
-        if (!t) return { matches: 0, kills: 0, deaths: 0, kd: 0 };
-        const { matches, kills, deaths } = t;
-        return { matches, kills, deaths, kd: calcKD(kills, deaths) };
+        const todayMatches = getTodayMatches();
+        const count = todayMatches.length;
+        const kills = todayMatches.reduce((s, m) => s + m.kills, 0);
+        const deaths = todayMatches.reduce((s, m) => s + m.deaths, 0);
+        const kd = deaths > 0 ? parseFloat((kills / deaths).toFixed(2)) : kills;
+        return { matches: count, kills, deaths, kd };
     }
 
     // 连续天数
     function getStreak() {
-        const dates = Object.keys(dailyData).sort().reverse();
+        // 从 matches 中提取所有有记录的日期
+        const datesSet = new Set(matches.map(m => m.date));
+        const dates = [...datesSet].sort().reverse();
         const today = todayStr();
         if (dates.length === 0 || dates[0] !== today) return 0;
         let streak = 1;
@@ -201,15 +264,24 @@
         return streak;
     }
 
-    // ---------- UI 更新 ----------
+    // 单局记录时间格式化（仅显示时分秒）
+    function formatTime(isoString) {
+        const date = new Date(isoString);
+        return date.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    // ---------- UI 刷新 ----------
     function refreshUI() {
         const stats = getTodayStats();
 
+        // 今日汇总
         document.getElementById('todayMatches').textContent = stats.matches;
         document.getElementById('todayKd').textContent = stats.matches > 0 ? stats.kd : '-';
+        document.getElementById('todayKills').textContent = stats.kills;
+        document.getElementById('todayDeaths').textContent = stats.deaths;
         document.getElementById('streak').textContent = `🔥 连续${getStreak()}天`;
 
-        // 目标进度文字
+        // 目标进度
         const progressDiv = document.getElementById('goalProgress');
         let msgs = [];
         if (stats.matches < goal.matches) msgs.push(`⚠️ 还差 ${goal.matches - stats.matches} 局`);
@@ -222,15 +294,41 @@
             progressDiv.innerHTML = msgs.join(' · ');
         }
 
-        // 回填目标输入框
+        // 回填目标输入
         document.getElementById('goalMatches').value = goal.matches;
         document.getElementById('goalKd').value = goal.kd;
 
+        // 渲染今日记录表
+        renderHistory();
         drawTrend();
         drawHeatmap();
     }
 
-    // 添加一局
+    // 渲染今日记录列表
+    function renderHistory() {
+        const container = document.getElementById('historyContainer');
+        const todayMatches = getTodayMatches();
+        if (todayMatches.length === 0) {
+            container.innerHTML = '<p class="no-records">暂无记录</p>';
+            return;
+        }
+        // 按时间倒序（最新的在前）
+        const sorted = [...todayMatches].sort((a, b) => new Date(b.time) - new Date(a.time));
+        let html = '<table class="history-table"><thead><tr><th>时间</th><th>击杀</th><th>死亡</th><th>K/D</th></tr></thead><tbody>';
+        for (const m of sorted) {
+            const kd = m.deaths > 0 ? (m.kills / m.deaths).toFixed(2) : m.kills;
+            html += `<tr>
+                <td>${formatTime(m.time)}</td>
+                <td>${m.kills}</td>
+                <td>${m.deaths}</td>
+                <td>${kd}</td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    // 记录新一局
     function addMatch() {
         const kills = parseInt(document.getElementById('killInput').value) || 0;
         const deaths = parseInt(document.getElementById('deathInput').value) || 0;
@@ -240,11 +338,14 @@
             return;
         }
 
-        const todayRec = getToday() || { matches: 0, kills: 0, deaths: 0 };
-        todayRec.matches += 1;
-        todayRec.kills += kills;
-        todayRec.deaths += deaths;
-        saveToday(todayRec);
+        const newRecord = {
+            date: todayStr(),
+            time: new Date().toISOString(),
+            kills: kills,
+            deaths: deaths
+        };
+        matches.push(newRecord);
+        localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
         refreshUI();
         checkGoalNotification();
     }
@@ -270,12 +371,11 @@
         }
     }
 
-    // 请求通知权限
     if ("Notification" in window && Notification.permission === "default") {
         Notification.requestPermission();
     }
 
-    // ---------- 趋势图 ----------
+    // ---------- 趋势图（基于每日汇总）----------
     let trendChart;
     function drawTrend() {
         const days = 14;
@@ -285,10 +385,12 @@
             const d = new Date(today);
             d.setDate(d.getDate() - i);
             const dateStr = d.toISOString().slice(0,10);
-            const rec = dailyData[dateStr];
-            const kd = rec ? calcKD(rec.kills, rec.deaths) : null;
+            const dayMatches = matches.filter(m => m.date === dateStr);
+            const kills = dayMatches.reduce((s, m) => s + m.kills, 0);
+            const deaths = dayMatches.reduce((s, m) => s + m.deaths, 0);
+            const kd = deaths > 0 ? parseFloat((kills / deaths).toFixed(2)) : kills;
             labels.push(formatDateShort(dateStr));
-            kdData.push(kd);
+            kdData.push(dayMatches.length > 0 ? kd : null);
         }
 
         const ctx = document.getElementById('trendChart').getContext('2d');
@@ -336,16 +438,16 @@
             const daysInMonth = new Date(year, m+1, 0).getDate();
             for (let d = 1; d <= daysInMonth; d++) {
                 const dateStr = `${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                const rec = dailyData[dateStr];
-                const matches = rec ? rec.matches : 0;
+                const dayMatches = matches.filter(m => m.date === dateStr);
+                const matchCount = dayMatches.length;
                 const cell = document.createElement('div');
                 cell.className = 'day-cell';
-                if (matches > 0) {
-                    const intensity = Math.min(matches / 10, 1);
+                if (matchCount > 0) {
+                    const intensity = Math.min(matchCount / 10, 1);
                     cell.style.backgroundColor = `rgba(255,70,85,${0.2 + intensity * 0.8})`;
                 }
                 if (dateStr === today) cell.classList.add('today');
-                cell.title = `${dateStr}: ${matches}局`;
+                cell.title = `${dateStr}: ${matchCount}局`;
                 daysDiv.appendChild(cell);
             }
             monthDiv.appendChild(daysDiv);
@@ -353,7 +455,7 @@
         }
     }
 
-    // 绑定添加按钮
+    // 绑定事件
     document.getElementById('addMatchBtn').addEventListener('click', addMatch);
 
     // 初始渲染
