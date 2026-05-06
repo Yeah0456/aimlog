@@ -43,6 +43,13 @@
         transition: background 0.2s;
     }
     button:hover { background: #e03e4a; }
+    .btn-sm {
+        padding: 4px 10px;
+        font-size: 0.8rem;
+        border-radius: 4px;
+        background: #3d5060;
+    }
+    .btn-sm:hover { background: #ff4655; }
     input {
         background: #2b3a4a;
         border: 1px solid #3d5060;
@@ -81,8 +88,6 @@
         background: #2b3a4a;
     }
     .day-cell.today { outline: 2px solid white; }
-
-    /* 历史记录表格样式 */
     .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     .history-table th, .history-table td {
         padding: 8px 6px;
@@ -92,7 +97,6 @@
     .history-table th { color: var(--muted); font-weight: normal; font-size: 0.85rem; }
     .history-table td { font-size: 1rem; }
     .no-records { color: var(--muted); text-align: center; padding: 10px; }
-
     @media (max-width: 600px) {
         .stat-grid { grid-template-columns: 1fr 1fr; }
         input { width: 80px; }
@@ -149,7 +153,7 @@
     <button id="addMatchBtn" style="width:100%; padding:14px;">➕ 记录本局</button>
 </div>
 
-<!-- 今日记录列表（新增） -->
+<!-- 今日记录列表 -->
 <div class="card">
     <h2 style="font-size:1.3rem; margin-bottom:10px;">📜 今日记录</h2>
     <div id="historyContainer">
@@ -180,45 +184,38 @@
 </div>
 
 <script>
-    // ---------- 数据存储 ----------
-    const MATCHES_KEY = 'aimlog_matches';       // 新版：单局记录数组
+    const MATCHES_KEY = 'aimlog_matches';
     const GOAL_KEY = 'aimlog_goal';
 
-    let matches = [];   // { date, time: ISO string, kills, deaths }
+    let matches = [];
     let goal = { matches: 20, kd: 1.2 };
 
-    // 加载数据（含迁移）
+    // 加载数据
     function loadData() {
-        // 先尝试加载新格式
         const savedMatches = localStorage.getItem(MATCHES_KEY);
         if (savedMatches) {
             matches = JSON.parse(savedMatches);
             return;
         }
-        // 尝试迁移旧版 dailyData
         const oldDaily = localStorage.getItem('aimlog_daily');
         if (oldDaily) {
             const dailyData = JSON.parse(oldDaily);
-            // 将旧数据转为单局记录（每天一条汇总记录）
             for (const [date, record] of Object.entries(dailyData)) {
                 matches.push({
                     date: date,
-                    time: date + 'T00:00:00.000Z',  // 默认零点
+                    time: date + 'T00:00:00.000Z',
                     kills: record.kills,
                     deaths: record.deaths,
-                    consolidated: true   // 标记为旧汇总数据
+                    consolidated: true
                 });
             }
-            // 保存新格式并清除旧数据（可选）
             localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
             localStorage.removeItem('aimlog_daily');
             return;
         }
-        // 无数据则空
         matches = [];
     }
 
-    // 加载目标
     function loadGoal() {
         const savedGoal = localStorage.getItem(GOAL_KEY);
         if (savedGoal) goal = JSON.parse(savedGoal);
@@ -227,17 +224,14 @@
     loadData();
     loadGoal();
 
-    // ---------- 工具函数 ----------
+    // 工具函数
     const todayStr = () => new Date().toISOString().slice(0,10);
-    const formatDateShort = (d) => d.slice(5);  // MM-DD
+    const formatDateShort = (d) => d.slice(5);
 
-    // 获取今日所有记录
     function getTodayMatches() {
-        const today = todayStr();
-        return matches.filter(m => m.date === today);
+        return matches.filter(m => m.date === todayStr());
     }
 
-    // 计算今日汇总统计
     function getTodayStats() {
         const todayMatches = getTodayMatches();
         const count = todayMatches.length;
@@ -247,9 +241,7 @@
         return { matches: count, kills, deaths, kd };
     }
 
-    // 连续天数
     function getStreak() {
-        // 从 matches 中提取所有有记录的日期
         const datesSet = new Set(matches.map(m => m.date));
         const dates = [...datesSet].sort().reverse();
         const today = todayStr();
@@ -264,24 +256,28 @@
         return streak;
     }
 
-    // 单局记录时间格式化（仅显示时分秒）
     function formatTime(isoString) {
         const date = new Date(isoString);
         return date.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     }
 
-    // ---------- UI 刷新 ----------
+    // 删除单条记录（通过 time 字段唯一匹配）
+    function deleteMatch(time) {
+        matches = matches.filter(m => m.time !== time);
+        localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
+        refreshUI();
+    }
+
+    // UI 刷新
     function refreshUI() {
         const stats = getTodayStats();
 
-        // 今日汇总
         document.getElementById('todayMatches').textContent = stats.matches;
         document.getElementById('todayKd').textContent = stats.matches > 0 ? stats.kd : '-';
         document.getElementById('todayKills').textContent = stats.kills;
         document.getElementById('todayDeaths').textContent = stats.deaths;
         document.getElementById('streak').textContent = `🔥 连续${getStreak()}天`;
 
-        // 目标进度
         const progressDiv = document.getElementById('goalProgress');
         let msgs = [];
         if (stats.matches < goal.matches) msgs.push(`⚠️ 还差 ${goal.matches - stats.matches} 局`);
@@ -294,17 +290,15 @@
             progressDiv.innerHTML = msgs.join(' · ');
         }
 
-        // 回填目标输入
         document.getElementById('goalMatches').value = goal.matches;
         document.getElementById('goalKd').value = goal.kd;
 
-        // 渲染今日记录表
         renderHistory();
         drawTrend();
         drawHeatmap();
     }
 
-    // 渲染今日记录列表
+    // 渲染今日记录（带删除按钮）
     function renderHistory() {
         const container = document.getElementById('historyContainer');
         const todayMatches = getTodayMatches();
@@ -312,16 +306,18 @@
             container.innerHTML = '<p class="no-records">暂无记录</p>';
             return;
         }
-        // 按时间倒序（最新的在前）
         const sorted = [...todayMatches].sort((a, b) => new Date(b.time) - new Date(a.time));
-        let html = '<table class="history-table"><thead><tr><th>时间</th><th>击杀</th><th>死亡</th><th>K/D</th></tr></thead><tbody>';
+        let html = '<table class="history-table"><thead><tr><th>时间</th><th>击杀</th><th>死亡</th><th>K/D</th><th>操作</th></tr></thead><tbody>';
         for (const m of sorted) {
             const kd = m.deaths > 0 ? (m.kills / m.deaths).toFixed(2) : m.kills;
+            // 用 time 作为每条记录的唯一标识
+            const timeKey = m.time.replace(/'/g, "\\'");
             html += `<tr>
                 <td>${formatTime(m.time)}</td>
                 <td>${m.kills}</td>
                 <td>${m.deaths}</td>
                 <td>${kd}</td>
+                <td><button class="btn-sm" onclick="deleteMatch('${timeKey}')">🗑 删除</button></td>
             </tr>`;
         }
         html += '</tbody></table>';
@@ -338,19 +334,17 @@
             return;
         }
 
-        const newRecord = {
+        matches.push({
             date: todayStr(),
             time: new Date().toISOString(),
             kills: kills,
             deaths: deaths
-        };
-        matches.push(newRecord);
+        });
         localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
         refreshUI();
         checkGoalNotification();
     }
 
-    // 保存目标
     function saveGoal() {
         goal.matches = parseInt(document.getElementById('goalMatches').value) || 20;
         goal.kd = parseFloat(document.getElementById('goalKd').value) || 1.2;
@@ -358,7 +352,6 @@
         refreshUI();
     }
 
-    // 目标达成通知
     function checkGoalNotification() {
         if (!("Notification" in window)) return;
         const stats = getTodayStats();
@@ -375,7 +368,7 @@
         Notification.requestPermission();
     }
 
-    // ---------- 趋势图（基于每日汇总）----------
+    // 趋势图
     let trendChart;
     function drawTrend() {
         const days = 14;
@@ -392,7 +385,6 @@
             labels.push(formatDateShort(dateStr));
             kdData.push(dayMatches.length > 0 ? kd : null);
         }
-
         const ctx = document.getElementById('trendChart').getContext('2d');
         if (trendChart) trendChart.destroy();
         trendChart = new Chart(ctx, {
@@ -417,14 +409,13 @@
         });
     }
 
-    // ---------- 热力图 ----------
+    // 热力图
     function drawHeatmap() {
         const container = document.getElementById('heatmap');
         container.innerHTML = '';
         const year = new Date().getFullYear();
         const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
         const today = todayStr();
-
         for (let m = 0; m < 12; m++) {
             const monthDiv = document.createElement('div');
             monthDiv.className = 'month-row';
@@ -432,7 +423,6 @@
             label.className = 'month-label';
             label.textContent = months[m];
             monthDiv.appendChild(label);
-
             const daysDiv = document.createElement('div');
             daysDiv.className = 'days';
             const daysInMonth = new Date(year, m+1, 0).getDate();
@@ -455,10 +445,7 @@
         }
     }
 
-    // 绑定事件
     document.getElementById('addMatchBtn').addEventListener('click', addMatch);
-
-    // 初始渲染
     refreshUI();
 </script>
 </body>
