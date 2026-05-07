@@ -74,6 +74,7 @@
       width: 100%;
     }
     button.secondary { background: #2b3a4a; }
+    button.small { padding: 6px 10px; font-size: 0.8rem; width: auto; }
     input {
       background: #2b3a4a;
       border: 1px solid #3d5060;
@@ -140,14 +141,18 @@
       position: absolute;
       bottom: 4px;
     }
-    .match-list { max-height: 300px; overflow-y: auto; }
+    .match-list { max-height: 400px; overflow-y: auto; }
     .match-item {
       display: flex;
       justify-content: space-between;
-      padding: 8px 0;
+      align-items: center;
+      padding: 10px 0;
       border-bottom: 1px solid #2b3a4a;
+      gap: 6px;
     }
     .match-item:last-child { border-bottom: none; }
+    .match-info { flex: 2; }
+    .match-actions { display: flex; gap: 8px; }
     .day-summary { margin-top: 10px; color: var(--muted); font-size: 0.9rem; }
     canvas { width: 100% !important; height: auto !important; }
     .heatmap { display: flex; flex-direction: column; gap: 4px; }
@@ -159,6 +164,7 @@
       border-radius: 2px;
       background: #2b3a4a;
     }
+    .edit-input { width: 60px; margin: 0 4px; }
   </style>
 </head>
 <body>
@@ -205,6 +211,15 @@
     <div class="card">
       <h3>📅 年度热力图</h3>
       <div id="heatmap" class="heatmap"></div>
+    </div>
+    <!-- 数据管理卡片 -->
+    <div class="card">
+      <h3 style="margin-bottom:10px;">⚙️ 数据管理</h3>
+      <div class="flex" style="gap:12px;">
+        <button onclick="exportData()" class="secondary" style="flex:1;">📤 导出数据</button>
+        <button onclick="document.getElementById('importFile').click()" class="secondary" style="flex:1;">📥 导入数据</button>
+        <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
+      </div>
     </div>
   </div>
 
@@ -413,22 +428,79 @@
       document.getElementById('selectedDateTitle').textContent = `📋 ${selectedDate}`;
       const dayMatches = matches.filter(m=>m.date===selectedDate);
       const list = document.getElementById('matchList');
+      const summaryDiv = document.getElementById('daySummary');
+
       if (!dayMatches.length) {
         list.innerHTML = '<div style="color:var(--muted); padding:20px 0; text-align:center;">当天无记录</div>';
-        document.getElementById('daySummary').textContent = '';
+        summaryDiv.textContent = '';
         return;
       }
-      list.innerHTML = dayMatches.map((m,i) => `
-        <div class="match-item">
-          <span>第${i+1}局</span>
-          <span>${m.kills}杀 / ${m.deaths}死</span>
-          <span>K/D ${m.deaths ? (m.kills/m.deaths).toFixed(2) : m.kills}</span>
-        </div>
-      `).join('');
+
+      // 构建列表，包含编辑和删除按钮
+      list.innerHTML = dayMatches.map((m, idx) => {
+        // 找到该比赛在整个 matches 数组中的真实索引，以便后续操作
+        const realIndex = matches.indexOf(m);
+        return `
+          <div class="match-item" id="match-${realIndex}">
+            <div class="match-info">
+              <span>第${idx+1}局</span>
+              <span>${m.kills}杀 / ${m.deaths}死</span>
+              <span>K/D ${m.deaths ? (m.kills/m.deaths).toFixed(2) : m.kills}</span>
+            </div>
+            <div class="match-actions">
+              <button class="small secondary" onclick="editMatch(${realIndex})">✏️</button>
+              <button class="small" onclick="deleteMatch(${realIndex})">🗑️</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 当日汇总
       const kills = dayMatches.reduce((s,m)=>s+m.kills,0);
       const deaths = dayMatches.reduce((s,m)=>s+m.deaths,0);
-      document.getElementById('daySummary').textContent = 
-        `当日总计: ${kills}杀 ${deaths}死 · K/D ${deaths ? (kills/deaths).toFixed(2) : kills}`;
+      summaryDiv.textContent = `当日总计: ${kills}杀 ${deaths}死 · K/D ${deaths ? (kills/deaths).toFixed(2) : kills}`;
+    }
+
+    // 删除单局
+    function deleteMatch(index) {
+      if (!confirm('确定要删除这局记录吗？')) return;
+      matches.splice(index, 1);
+      saveData();
+      // 刷新历史页及打卡页
+      refreshHistoryPage();
+      refreshLogPage();
+    }
+
+    // 编辑单局
+    function editMatch(index) {
+      const match = matches[index];
+      const itemDiv = document.getElementById(`match-${index}`);
+      if (!itemDiv) return;
+      itemDiv.innerHTML = `
+        <div class="match-info" style="display:flex; align-items:center; gap:6px;">
+          击杀 <input type="number" class="edit-input" id="editKills-${index}" value="${match.kills}" min="0">
+          死亡 <input type="number" class="edit-input" id="editDeaths-${index}" value="${match.deaths}" min="0">
+        </div>
+        <div class="match-actions">
+          <button class="small secondary" onclick="saveEdit(${index})">💾 保存</button>
+          <button class="small" onclick="cancelEdit(${index})">❌ 取消</button>
+        </div>
+      `;
+    }
+
+    function saveEdit(index) {
+      const kills = parseInt(document.getElementById(`editKills-${index}`).value) || 0;
+      const deaths = parseInt(document.getElementById(`editDeaths-${index}`).value) || 0;
+      matches[index].kills = kills;
+      matches[index].deaths = deaths;
+      saveData();
+      refreshHistoryPage();
+      refreshLogPage();
+    }
+
+    function cancelEdit(index) {
+      // 简单地重新渲染列表即可恢复
+      refreshHistoryPage();
     }
 
     function changeMonth(delta) {
@@ -445,7 +517,49 @@
       showDateDetail();
     }
 
-    // 初始化
+    // ================= 导出/导入 =================
+    function exportData() {
+      const data = { matches, goal };
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `死斗打卡_备份_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (!confirm('导入数据会覆盖当前所有记录和目标，确定继续吗？')) {
+        event.target.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data.matches && Array.isArray(data.matches) && data.goal) {
+            matches = data.matches;
+            goal = data.goal;
+            saveData();
+            localStorage.setItem(GOAL_STORAGE, JSON.stringify(goal));
+            alert('导入成功！');
+            refreshLogPage();
+            refreshHistoryPage();
+          } else {
+            alert('文件格式不正确，需包含 matches 数组和 goal 对象。');
+          }
+        } catch (err) {
+          alert('读取文件失败，请确认是有效的 JSON 文件。');
+        }
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    // ================= 初始化 =================
     document.getElementById('saveMatchBtn').addEventListener('click', addMatch);
     if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
 
