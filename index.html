@@ -1,452 +1,477 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AimLog Lite · 死斗单局记录</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>死斗打卡</title>
+  <meta name="theme-color" content="#0f1923">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="死斗打卡">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><rect width='32' height='32' rx='6' fill='%230f1923'/><text x='16' y='22' font-size='20' text-anchor='middle' fill='%23ff4655'>🎯</text></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
     :root {
-        --bg: #0f1923;
-        --card: #1b2733;
-        --red: #ff4655;
-        --text: #ece8e1;
-        --muted: #7b8a9a;
+      --bg: #0f1923;
+      --card: #1b2733;
+      --red: #ff4655;
+      --text: #ece8e1;
+      --muted: #7b8a9a;
+      --nav-height: 56px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-        font-family: 'Segoe UI', system-ui, sans-serif;
-        background: var(--bg);
-        color: var(--text);
-        padding: 20px;
-        max-width: 800px;
-        margin: auto;
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding-bottom: var(--nav-height);
+      max-width: 500px;
+      margin: auto;
+      min-height: 100vh;
     }
-    h1 { color: var(--red); font-size: 1.8rem; margin-bottom: 20px; }
+    .header {
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 100;
+      border-bottom: 1px solid #2b3a4a;
+    }
+    .header h1 { font-size: 1.4rem; color: var(--red); }
+    .streak {
+      background: var(--red);
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 0.85rem;
+    }
+    .page { display: none; padding: 16px; }
+    .page.active { display: block; }
     .card {
-        background: var(--card);
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 16px;
+      background: var(--card);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
     }
     .flex { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .space-between { display: flex; justify-content: space-between; align-items: center; }
-    button {
-        background: var(--red);
-        color: white;
-        border: none;
-        padding: 12px 20px;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-    button:hover { background: #e03e4a; }
-    .btn-sm {
-        padding: 4px 10px;
-        font-size: 0.8rem;
-        border-radius: 4px;
-        background: #3d5060;
-    }
-    .btn-sm:hover { background: #ff4655; }
-    input {
-        background: #2b3a4a;
-        border: 1px solid #3d5060;
-        color: var(--text);
-        padding: 12px;
-        border-radius: 8px;
-        font-size: 1rem;
-        width: 90px;
-        text-align: center;
-    }
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+    .stat-row { display: flex; justify-content: space-around; margin: 10px 0; }
     .stat-item { text-align: center; }
-    .stat-label { font-size: 0.9rem; color: var(--muted); margin-bottom: 5px; }
+    .stat-label { font-size: 0.85rem; color: var(--muted); }
     .stat-value { font-size: 2rem; font-weight: bold; }
-    .stat-row { display: flex; justify-content: center; gap: 30px; margin-bottom: 15px; }
-    .stat-row-item { text-align: center; }
-    .stat-row-label { color: var(--muted); font-size: 0.9rem; }
-    .stat-row-value { font-size: 1.5rem; font-weight: bold; }
-    .streak-badge {
-        background: var(--red);
-        color: white;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: bold;
-        font-size: 0.9rem;
+    button {
+      background: var(--red);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
     }
-    .progress-msg { margin-top: 10px; font-size: 0.95rem; text-align: center; }
-    canvas { background: #1b2733; border-radius: 8px; margin-top: 10px; }
-    .heatmap { display: flex; flex-direction: column; gap: 6px; }
-    .month-row { display: flex; align-items: center; }
-    .month-label { width: 35px; font-size: 0.8rem; color: var(--muted); }
-    .days { display: flex; flex-wrap: wrap; gap: 3px; }
+    button.secondary { background: #2b3a4a; }
+    input {
+      background: #2b3a4a;
+      border: 1px solid #3d5060;
+      color: var(--text);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 1rem;
+      text-align: center;
+      width: 80px;
+    }
+    input[type="number"]::-webkit-inner-spin-button { opacity: 1; height: 28px; }
+    .nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      background: #1b2733;
+      border-top: 1px solid #2b3a4a;
+      height: var(--nav-height);
+    }
+    .nav-btn {
+      flex: 1;
+      background: transparent;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: bold;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .nav-btn.active { color: var(--red); }
+    .calendar { margin-bottom: 14px; }
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: var(--muted); font-size: 0.8rem; margin-bottom: 4px; }
+    .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
     .day-cell {
-        width: 14px; height: 14px;
-        border-radius: 2px;
-        background: #2b3a4a;
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      position: relative;
+      background: #2b3a4a;
+      cursor: pointer;
     }
-    .day-cell.today { outline: 2px solid white; }
-    .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    .history-table th, .history-table td {
-        padding: 8px 6px;
-        text-align: center;
-        border-bottom: 1px solid #2b3a4a;
+    .day-cell.selected { outline: 2px solid var(--red); }
+    .day-cell.today { background: #3d5060; }
+    .day-cell.has-record::after {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--red);
+      border-radius: 50%;
+      position: absolute;
+      bottom: 4px;
     }
-    .history-table th { color: var(--muted); font-weight: normal; font-size: 0.85rem; }
-    .history-table td { font-size: 1rem; }
-    .no-records { color: var(--muted); text-align: center; padding: 10px; }
-    @media (max-width: 600px) {
-        .stat-grid { grid-template-columns: 1fr 1fr; }
-        input { width: 80px; }
+    .match-list { max-height: 300px; overflow-y: auto; }
+    .match-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #2b3a4a;
     }
-</style>
+    .match-item:last-child { border-bottom: none; }
+    .day-summary { margin-top: 10px; color: var(--muted); font-size: 0.9rem; }
+    canvas { width: 100% !important; height: auto !important; }
+    .heatmap { display: flex; flex-direction: column; gap: 4px; }
+    .month-row { display: flex; align-items: center; }
+    .month-label { width: 35px; font-size: 0.75rem; color: var(--muted); }
+    .days { display: flex; flex-wrap: wrap; gap: 2px; }
+    .hcell {
+      width: 12px; height: 12px;
+      border-radius: 2px;
+      background: #2b3a4a;
+    }
+  </style>
 </head>
 <body>
-<h1>🎯 AimLog Lite</h1>
+  <div class="header">
+    <h1>🎯 死斗打卡</h1>
+    <span id="streak" class="streak">🔥 0天</span>
+  </div>
 
-<!-- 今日累计卡片 -->
-<div class="card">
-    <div class="space-between">
-        <h2 style="margin:0; font-size:1.3rem;">📊 今日累计</h2>
-        <span id="streak" class="streak-badge">🔥 0天</span>
-    </div>
-    <div style="margin-top:15px;">
-        <div class="stat-grid">
-            <div class="stat-item">
-                <div class="stat-label">总局数</div>
-                <div class="stat-value" id="todayMatches">0</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">今日K/D</div>
-                <div class="stat-value" id="todayKd">-</div>
-            </div>
+  <!-- 打卡页 -->
+  <div id="page-log" class="page active">
+    <div class="card">
+      <div class="stat-row">
+        <div class="stat-item">
+          <div class="stat-label">今日局数</div>
+          <div class="stat-value" id="todayCount">0</div>
         </div>
-        <div class="stat-row">
-            <div class="stat-row-item">
-                <div class="stat-row-label">总击杀</div>
-                <div class="stat-row-value" id="todayKills">0</div>
-            </div>
-            <div class="stat-row-item">
-                <div class="stat-row-label">总死亡</div>
-                <div class="stat-row-value" id="todayDeaths">0</div>
-            </div>
+        <div class="stat-item">
+          <div class="stat-label">今日K/D</div>
+          <div class="stat-value" id="todayKd">-</div>
         </div>
-        <div id="goalProgress" class="progress-msg"></div>
+      </div>
+      <div id="goalProgress" style="font-size:0.9rem; margin-top:10px;"></div>
     </div>
-</div>
-
-<!-- 单局记录卡片 -->
-<div class="card">
-    <h2 style="font-size:1.3rem; margin-bottom:15px;">✍️ 记录本局</h2>
-    <div class="flex" style="justify-content: center; gap: 20px; margin-bottom: 15px;">
-        <div style="text-align:center;">
-            <div style="color:var(--muted); margin-bottom:5px;">击杀</div>
-            <input type="number" id="killInput" value="20" min="0">
-        </div>
-        <div style="text-align:center;">
-            <div style="color:var(--muted); margin-bottom:5px;">死亡</div>
-            <input type="number" id="deathInput" value="15" min="0">
-        </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px;">✍️ 记录本局</h3>
+      <div class="flex" style="justify-content:center; margin-bottom:12px;">
+        <input type="number" id="killInput" value="20" min="0" placeholder="击杀">
+        <input type="number" id="deathInput" value="15" min="0" placeholder="死亡">
+      </div>
+      <button id="saveMatchBtn">➕ 记录本局</button>
     </div>
-    <button id="addMatchBtn" style="width:100%; padding:14px;">➕ 记录本局</button>
-</div>
-
-<!-- 今日记录列表 -->
-<div class="card">
-    <h2 style="font-size:1.3rem; margin-bottom:10px;">📜 今日记录</h2>
-    <div id="historyContainer">
-        <p class="no-records">暂无记录</p>
+    <div class="card">
+      <h3 style="margin-bottom:10px;">🎯 每日目标</h3>
+      <div class="flex">
+        <input type="number" id="goalMatches" value="20" min="1" style="width:70px;"> 局
+        <input type="number" id="goalKd" value="1.2" step="0.1" style="width:80px;"> K/D
+        <button class="secondary" onclick="saveGoal()" style="width:auto; padding:10px 16px;">保存目标</button>
+      </div>
     </div>
-</div>
-
-<!-- 每日目标卡片 -->
-<div class="card">
-    <h2 style="font-size:1.3rem; margin-bottom:15px;">🎯 每日目标</h2>
-    <div class="flex">
-        <label>局数 <input type="number" id="goalMatches" value="20" min="1" style="width:70px;"></label>
-        <label>最低K/D <input type="number" id="goalKd" value="1.2" step="0.1" style="width:80px;"></label>
-        <button onclick="saveGoal()">保存目标</button>
+    <div class="card">
+      <h3>📈 近14天K/D</h3>
+      <canvas id="trendChart" height="180"></canvas>
     </div>
-</div>
+    <div class="card">
+      <h3>📅 年度热力图</h3>
+      <div id="heatmap" class="heatmap"></div>
+    </div>
+  </div>
 
-<!-- 趋势图 -->
-<div class="card">
-    <h2 style="font-size:1.3rem; margin-bottom:10px;">📈 近14天K/D趋势</h2>
-    <canvas id="trendChart" height="220"></canvas>
-</div>
+  <!-- 历史页 -->
+  <div id="page-history" class="page">
+    <div class="card calendar">
+      <div class="calendar-header">
+        <button onclick="changeMonth(-1)" style="width:auto; background:#2b3a4a; padding:6px 12px;">◀</button>
+        <span id="currentMonthLabel" style="font-weight:bold;"></span>
+        <button onclick="changeMonth(1)" style="width:auto; background:#2b3a4a; padding:6px 12px;">▶</button>
+      </div>
+      <div class="weekdays">
+        <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+      </div>
+      <div id="calendarGrid" class="days-grid"></div>
+    </div>
+    <div class="card">
+      <h3 id="selectedDateTitle">选择日期查看详情</h3>
+      <div id="matchList" class="match-list"></div>
+      <div id="daySummary" class="day-summary"></div>
+    </div>
+  </div>
 
-<!-- 年度热力图 -->
-<div class="card">
-    <h2 style="font-size:1.3rem; margin-bottom:10px;">📅 年度训练热力图</h2>
-    <div id="heatmap" class="heatmap"></div>
-</div>
+  <!-- 底部导航 -->
+  <div class="nav">
+    <button class="nav-btn active" onclick="switchPage('log')">🎯 打卡</button>
+    <button class="nav-btn" onclick="switchPage('history')">📅 历史</button>
+  </div>
 
-<script>
-    const MATCHES_KEY = 'aimlog_matches';
-    const GOAL_KEY = 'aimlog_goal';
+  <script>
+    // ================= 数据存储 =================
+    const STORAGE = 'dm_matches';
+    const GOAL_STORAGE = 'dm_goal';
+    let matches = JSON.parse(localStorage.getItem(STORAGE) || '[]');
+    let goal = JSON.parse(localStorage.getItem(GOAL_STORAGE)) || { matches: 20, kd: 1.2 };
 
-    let matches = [];
-    let goal = { matches: 20, kd: 1.2 };
-
-    // 加载数据
-    function loadData() {
-        const savedMatches = localStorage.getItem(MATCHES_KEY);
-        if (savedMatches) {
-            matches = JSON.parse(savedMatches);
-            return;
-        }
-        const oldDaily = localStorage.getItem('aimlog_daily');
-        if (oldDaily) {
-            const dailyData = JSON.parse(oldDaily);
-            for (const [date, record] of Object.entries(dailyData)) {
-                matches.push({
-                    date: date,
-                    time: date + 'T00:00:00.000Z',
-                    kills: record.kills,
-                    deaths: record.deaths,
-                    consolidated: true
-                });
-            }
-            localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
-            localStorage.removeItem('aimlog_daily');
-            return;
-        }
-        matches = [];
-    }
-
-    function loadGoal() {
-        const savedGoal = localStorage.getItem(GOAL_KEY);
-        if (savedGoal) goal = JSON.parse(savedGoal);
-    }
-
-    loadData();
-    loadGoal();
-
-    // 工具函数
     const todayStr = () => new Date().toISOString().slice(0,10);
-    const formatDateShort = (d) => d.slice(5);
 
-    function getTodayMatches() {
-        return matches.filter(m => m.date === todayStr());
+    function saveData() { localStorage.setItem(STORAGE, JSON.stringify(matches)); }
+    function saveGoal() {
+      goal.matches = parseInt(document.getElementById('goalMatches').value) || 20;
+      goal.kd = parseFloat(document.getElementById('goalKd').value) || 1.2;
+      localStorage.setItem(GOAL_STORAGE, JSON.stringify(goal));
+      refreshLogPage();
     }
 
-    function getTodayStats() {
-        const todayMatches = getTodayMatches();
-        const count = todayMatches.length;
-        const kills = todayMatches.reduce((s, m) => s + m.kills, 0);
-        const deaths = todayMatches.reduce((s, m) => s + m.deaths, 0);
-        const kd = deaths > 0 ? parseFloat((kills / deaths).toFixed(2)) : kills;
-        return { matches: count, kills, deaths, kd };
+    // ================= 页面切换 =================
+    function switchPage(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(`page-${page}`).classList.add('active');
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector(`.nav-btn:nth-child(${page === 'log' ? 1 : 2})`).classList.add('active');
+      if (page === 'log') refreshLogPage();
+      if (page === 'history') refreshHistoryPage();
+    }
+
+    // ================= 打卡页逻辑 =================
+    function getTodayMatches() {
+      return matches.filter(m => m.date === todayStr());
+    }
+
+    function refreshLogPage() {
+      const todayMatches = getTodayMatches();
+      const count = todayMatches.length;
+      const kills = todayMatches.reduce((s,m)=>s+m.kills, 0);
+      const deaths = todayMatches.reduce((s,m)=>s+m.deaths, 0);
+      const kd = deaths > 0 ? (kills/deaths).toFixed(2) : kills;
+
+      document.getElementById('todayCount').textContent = count;
+      document.getElementById('todayKd').textContent = count ? kd : '-';
+      document.getElementById('streak').textContent = `🔥 连续${getStreak()}天`;
+
+      const progress = document.getElementById('goalProgress');
+      let msgs = [];
+      if (count < goal.matches) msgs.push(`⚠️ 还差 ${goal.matches - count} 局`);
+      if (count && parseFloat(kd) < goal.kd) msgs.push(`K/D ${kd} 低于目标`);
+      if (msgs.length === 0 && count) msgs.push('✨ 今日目标达成！');
+      else if (!count) msgs.push('📝 今天还没记录');
+      progress.textContent = msgs.join(' · ');
+
+      document.getElementById('goalMatches').value = goal.matches;
+      document.getElementById('goalKd').value = goal.kd;
+
+      drawTrend();
+      drawHeatmap();
+    }
+
+    function addMatch() {
+      const kills = parseInt(document.getElementById('killInput').value) || 0;
+      const deaths = parseInt(document.getElementById('deathInput').value) || 0;
+      matches.push({ date: todayStr(), kills, deaths });
+      saveData();
+      refreshLogPage();
+      checkGoalNotification();
     }
 
     function getStreak() {
-        const datesSet = new Set(matches.map(m => m.date));
-        const dates = [...datesSet].sort().reverse();
-        const today = todayStr();
-        if (dates.length === 0 || dates[0] !== today) return 0;
-        let streak = 1;
-        for (let i = 1; i < dates.length; i++) {
-            const prev = new Date(dates[i-1]);
-            const curr = new Date(dates[i]);
-            if ((prev - curr) / (1000*60*60*24) === 1) streak++;
-            else break;
-        }
-        return streak;
-    }
-
-    function formatTime(isoString) {
-        const date = new Date(isoString);
-        return date.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    }
-
-    // 删除单条记录（通过 time 字段唯一匹配）
-    function deleteMatch(time) {
-        matches = matches.filter(m => m.time !== time);
-        localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
-        refreshUI();
-    }
-
-    // UI 刷新
-    function refreshUI() {
-        const stats = getTodayStats();
-
-        document.getElementById('todayMatches').textContent = stats.matches;
-        document.getElementById('todayKd').textContent = stats.matches > 0 ? stats.kd : '-';
-        document.getElementById('todayKills').textContent = stats.kills;
-        document.getElementById('todayDeaths').textContent = stats.deaths;
-        document.getElementById('streak').textContent = `🔥 连续${getStreak()}天`;
-
-        const progressDiv = document.getElementById('goalProgress');
-        let msgs = [];
-        if (stats.matches < goal.matches) msgs.push(`⚠️ 还差 ${goal.matches - stats.matches} 局`);
-        if (stats.matches > 0 && stats.kd < goal.kd) msgs.push(` K/D ${stats.kd} < ${goal.kd}`);
-        if (msgs.length === 0 && stats.matches > 0) {
-            progressDiv.innerHTML = '✨ 今日目标全部达成！';
-        } else if (stats.matches === 0) {
-            progressDiv.innerHTML = '📝 今天还没记录，打完一局就录入吧';
-        } else {
-            progressDiv.innerHTML = msgs.join(' · ');
-        }
-
-        document.getElementById('goalMatches').value = goal.matches;
-        document.getElementById('goalKd').value = goal.kd;
-
-        renderHistory();
-        drawTrend();
-        drawHeatmap();
-    }
-
-    // 渲染今日记录（带删除按钮）
-    function renderHistory() {
-        const container = document.getElementById('historyContainer');
-        const todayMatches = getTodayMatches();
-        if (todayMatches.length === 0) {
-            container.innerHTML = '<p class="no-records">暂无记录</p>';
-            return;
-        }
-        const sorted = [...todayMatches].sort((a, b) => new Date(b.time) - new Date(a.time));
-        let html = '<table class="history-table"><thead><tr><th>时间</th><th>击杀</th><th>死亡</th><th>K/D</th><th>操作</th></tr></thead><tbody>';
-        for (const m of sorted) {
-            const kd = m.deaths > 0 ? (m.kills / m.deaths).toFixed(2) : m.kills;
-            // 用 time 作为每条记录的唯一标识
-            const timeKey = m.time.replace(/'/g, "\\'");
-            html += `<tr>
-                <td>${formatTime(m.time)}</td>
-                <td>${m.kills}</td>
-                <td>${m.deaths}</td>
-                <td>${kd}</td>
-                <td><button class="btn-sm" onclick="deleteMatch('${timeKey}')">🗑 删除</button></td>
-            </tr>`;
-        }
-        html += '</tbody></table>';
-        container.innerHTML = html;
-    }
-
-    // 记录新一局
-    function addMatch() {
-        const kills = parseInt(document.getElementById('killInput').value) || 0;
-        const deaths = parseInt(document.getElementById('deathInput').value) || 0;
-
-        if (kills === 0 && deaths === 0) {
-            alert('请至少输入击杀或死亡数');
-            return;
-        }
-
-        matches.push({
-            date: todayStr(),
-            time: new Date().toISOString(),
-            kills: kills,
-            deaths: deaths
-        });
-        localStorage.setItem(MATCHES_KEY, JSON.stringify(matches));
-        refreshUI();
-        checkGoalNotification();
-    }
-
-    function saveGoal() {
-        goal.matches = parseInt(document.getElementById('goalMatches').value) || 20;
-        goal.kd = parseFloat(document.getElementById('goalKd').value) || 1.2;
-        localStorage.setItem(GOAL_KEY, JSON.stringify(goal));
-        refreshUI();
+      const uniqueDates = [...new Set(matches.map(m=>m.date))].sort().reverse();
+      if (!uniqueDates.length || uniqueDates[0] !== todayStr()) return 0;
+      let s = 1;
+      for (let i=1; i<uniqueDates.length; i++) {
+        const diff = (new Date(uniqueDates[i-1]) - new Date(uniqueDates[i])) / 86400000;
+        if (diff === 1) s++;
+        else break;
+      }
+      return s;
     }
 
     function checkGoalNotification() {
-        if (!("Notification" in window)) return;
-        const stats = getTodayStats();
-        if (stats.matches === 0) return;
-        const allDone = stats.matches >= goal.matches && stats.kd >= goal.kd;
-        if (allDone && Notification.permission === "granted") {
-            new Notification("🎉 恭喜！今日死斗目标全部达成！", {
-                body: `总局数 ${stats.matches}，K/D ${stats.kd}`,
-            });
-        }
-    }
-
-    if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission();
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+      const t = getTodayMatches();
+      const kills = t.reduce((s,m)=>s+m.kills,0);
+      const deaths = t.reduce((s,m)=>s+m.deaths,0);
+      const kd = deaths ? kills/deaths : kills;
+      if (t.length >= goal.matches && kd >= goal.kd) {
+        new Notification("🎉 今日死斗目标达成！", { body: `${t.length}局 · K/D ${kd.toFixed(2)}` });
+      }
     }
 
     // 趋势图
     let trendChart;
     function drawTrend() {
-        const days = 14;
-        const today = new Date();
-        const labels = [], kdData = [];
-        for (let i = days-1; i >= 0; i--) {
-            const d = new Date(today);
-            d.setDate(d.getDate() - i);
-            const dateStr = d.toISOString().slice(0,10);
-            const dayMatches = matches.filter(m => m.date === dateStr);
-            const kills = dayMatches.reduce((s, m) => s + m.kills, 0);
-            const deaths = dayMatches.reduce((s, m) => s + m.deaths, 0);
-            const kd = deaths > 0 ? parseFloat((kills / deaths).toFixed(2)) : kills;
-            labels.push(formatDateShort(dateStr));
-            kdData.push(dayMatches.length > 0 ? kd : null);
+      const days = 14, today = new Date();
+      const labels = [], kdArr = [];
+      for (let i=days-1; i>=0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate()-i);
+        const ds = d.toISOString().slice(0,10);
+        const dayMatches = matches.filter(m=>m.date===ds);
+        const kills = dayMatches.reduce((s,m)=>s+m.kills,0);
+        const deaths = dayMatches.reduce((s,m)=>s+m.deaths,0);
+        labels.push(`${d.getMonth()+1}/${d.getDate()}`);
+        kdArr.push(deaths ? kills/deaths : (kills || null));
+      }
+      const ctx = document.getElementById('trendChart').getContext('2d');
+      if (trendChart) trendChart.destroy();
+      trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{ label:'K/D', data:kdArr, borderColor:'#ff4655', tension:0.2, spanGaps:false }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          scales: { y: { min:0, title:{display:true,text:'K/D'} } }
         }
-        const ctx = document.getElementById('trendChart').getContext('2d');
-        if (trendChart) trendChart.destroy();
-        trendChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'K/D',
-                    data: kdData,
-                    borderColor: '#ff4655',
-                    backgroundColor: 'rgba(255,70,85,0.1)',
-                    tension: 0.2,
-                    spanGaps: false,
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: { min: 0, title: { display: true, text: 'K/D', color: '#ff4655' } }
-                }
-            }
-        });
+      });
     }
 
     // 热力图
     function drawHeatmap() {
-        const container = document.getElementById('heatmap');
-        container.innerHTML = '';
-        const year = new Date().getFullYear();
-        const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-        const today = todayStr();
-        for (let m = 0; m < 12; m++) {
-            const monthDiv = document.createElement('div');
-            monthDiv.className = 'month-row';
-            const label = document.createElement('span');
-            label.className = 'month-label';
-            label.textContent = months[m];
-            monthDiv.appendChild(label);
-            const daysDiv = document.createElement('div');
-            daysDiv.className = 'days';
-            const daysInMonth = new Date(year, m+1, 0).getDate();
-            for (let d = 1; d <= daysInMonth; d++) {
-                const dateStr = `${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                const dayMatches = matches.filter(m => m.date === dateStr);
-                const matchCount = dayMatches.length;
-                const cell = document.createElement('div');
-                cell.className = 'day-cell';
-                if (matchCount > 0) {
-                    const intensity = Math.min(matchCount / 10, 1);
-                    cell.style.backgroundColor = `rgba(255,70,85,${0.2 + intensity * 0.8})`;
-                }
-                if (dateStr === today) cell.classList.add('today');
-                cell.title = `${dateStr}: ${matchCount}局`;
-                daysDiv.appendChild(cell);
-            }
-            monthDiv.appendChild(daysDiv);
-            container.appendChild(monthDiv);
+      const container = document.getElementById('heatmap');
+      container.innerHTML = '';
+      const year = new Date().getFullYear();
+      const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+      for (let m=0; m<12; m++) {
+        const row = document.createElement('div'); row.className='month-row';
+        const label = document.createElement('span'); label.className='month-label'; label.textContent=months[m];
+        row.appendChild(label);
+        const daysDiv = document.createElement('div'); daysDiv.className='days';
+        const dim = new Date(year, m+1, 0).getDate();
+        for (let d=1; d<=dim; d++) {
+          const ds = `${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          const cnt = matches.filter(m=>m.date===ds).length;
+          const cell = document.createElement('div'); cell.className='hcell';
+          if (cnt>0) cell.style.backgroundColor = `rgba(255,70,85,${0.3+cnt*0.08})`;
+          if (ds===todayStr()) cell.style.outline='2px solid white';
+          cell.title = `${ds}: ${cnt}局`;
+          daysDiv.appendChild(cell);
         }
+        row.appendChild(daysDiv);
+        container.appendChild(row);
+      }
     }
 
-    document.getElementById('addMatchBtn').addEventListener('click', addMatch);
-    refreshUI();
-</script>
+    // ================= 历史页逻辑 =================
+    let calYear, calMonth, selectedDate = todayStr();
+    (function initCalendar() {
+      const now = new Date();
+      calYear = now.getFullYear();
+      calMonth = now.getMonth();
+    })();
+
+    function renderCalendar() {
+      document.getElementById('currentMonthLabel').textContent = `${calYear}年 ${calMonth+1}月`;
+      const grid = document.getElementById('calendarGrid');
+      grid.innerHTML = '';
+      const firstDay = new Date(calYear, calMonth, 1).getDay();
+      const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+      for (let i=0; i<firstDay; i++) grid.appendChild(document.createElement('div'));
+      for (let d=1; d<=daysInMonth; d++) {
+        const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const cell = document.createElement('div');
+        cell.className = 'day-cell';
+        cell.textContent = d;
+        if (ds === todayStr()) cell.classList.add('today');
+        if (ds === selectedDate) cell.classList.add('selected');
+        if (matches.some(m=>m.date===ds)) cell.classList.add('has-record');
+        cell.onclick = () => { selectedDate = ds; renderCalendar(); showDateDetail(); };
+        grid.appendChild(cell);
+      }
+    }
+
+    function showDateDetail() {
+      document.getElementById('selectedDateTitle').textContent = `📋 ${selectedDate}`;
+      const dayMatches = matches.filter(m=>m.date===selectedDate);
+      const list = document.getElementById('matchList');
+      if (!dayMatches.length) {
+        list.innerHTML = '<div style="color:var(--muted); padding:20px 0; text-align:center;">当天无记录</div>';
+        document.getElementById('daySummary').textContent = '';
+        return;
+      }
+      list.innerHTML = dayMatches.map((m,i) => `
+        <div class="match-item">
+          <span>第${i+1}局</span>
+          <span>${m.kills}杀 / ${m.deaths}死</span>
+          <span>K/D ${m.deaths ? (m.kills/m.deaths).toFixed(2) : m.kills}</span>
+        </div>
+      `).join('');
+      const kills = dayMatches.reduce((s,m)=>s+m.kills,0);
+      const deaths = dayMatches.reduce((s,m)=>s+m.deaths,0);
+      document.getElementById('daySummary').textContent = 
+        `当日总计: ${kills}杀 ${deaths}死 · K/D ${deaths ? (kills/deaths).toFixed(2) : kills}`;
+    }
+
+    function changeMonth(delta) {
+      calMonth += delta;
+      if (calMonth < 0) { calMonth = 11; calYear--; }
+      else if (calMonth > 11) { calMonth = 0; calYear++; }
+      renderCalendar();
+      selectedDate = `${calYear}-${String(calMonth+1).padStart(2,'0')}-01`;
+      showDateDetail();
+    }
+
+    function refreshHistoryPage() {
+      renderCalendar();
+      showDateDetail();
+    }
+
+    // 初始化
+    document.getElementById('saveMatchBtn').addEventListener('click', addMatch);
+    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+
+    // 动态生成 manifest 实现完整 PWA 安装体验
+    (function() {
+      const manifest = {
+        name: '死斗打卡',
+        short_name: '死斗打卡',
+        start_url: location.href,
+        display: 'standalone',
+        background_color: '#0f1923',
+        theme_color: '#0f1923',
+        icons: [{
+          src: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><rect width="192" height="192" rx="32" fill="#0f1923"/><text x="96" y="110" font-size="100" text-anchor="middle" fill="#ff4655">🎯</text></svg>'),
+          sizes: '192x192',
+          type: 'image/svg+xml'
+        }]
+      };
+      const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = URL.createObjectURL(blob);
+      document.head.appendChild(link);
+    })();
+
+    refreshLogPage();
+  </script>
 </body>
 </html>
