@@ -1,591 +1,514 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>死斗打卡</title>
-  <meta name="theme-color" content="#0f1923">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="死斗打卡">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><rect width='32' height='32' rx='6' fill='%230f1923'/><text x='16' y='22' font-size='20' text-anchor='middle' fill='%23ff4655'>🎯</text></svg>">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-  <style>
-    :root {
-      --bg: #0f1923;
-      --card: #1b2733;
-      --red: #ff4655;
-      --text: #ece8e1;
-      --muted: #7b8a9a;
-      --nav-height: 56px;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      padding-bottom: var(--nav-height);
-      max-width: 500px;
-      margin: auto;
-      min-height: 100vh;
-    }
-    .header {
-      padding: 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      position: sticky;
-      top: 0;
-      background: var(--bg);
-      z-index: 100;
-      border-bottom: 1px solid #2b3a4a;
-    }
-    .header h1 { font-size: 1.4rem; color: var(--red); }
-    .streak {
-      background: var(--red);
-      color: #fff;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-weight: bold;
-      font-size: 0.85rem;
-    }
-    .page { display: none; padding: 16px; }
-    .page.active { display: block; }
-    .card {
-      background: var(--card);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 14px;
-    }
-    .flex { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .stat-row { display: flex; justify-content: space-around; margin: 10px 0; }
-    .stat-item { text-align: center; }
-    .stat-label { font-size: 0.85rem; color: var(--muted); }
-    .stat-value { font-size: 2rem; font-weight: bold; }
-    button {
-      background: var(--red);
-      color: white;
-      border: none;
-      padding: 14px;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: bold;
-      cursor: pointer;
-      width: 100%;
-    }
-    button.secondary { background: #2b3a4a; }
-    button.small { padding: 6px 10px; font-size: 0.8rem; width: auto; }
-    input {
-      background: #2b3a4a;
-      border: 1px solid #3d5060;
-      color: var(--text);
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 1rem;
-      text-align: center;
-      width: 80px;
-    }
-    input[type="number"]::-webkit-inner-spin-button { opacity: 1; height: 28px; }
-    .nav {
-      position: fixed;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 100%;
-      max-width: 500px;
-      display: flex;
-      background: #1b2733;
-      border-top: 1px solid #2b3a4a;
-      height: var(--nav-height);
-    }
-    .nav-btn {
-      flex: 1;
-      background: transparent;
-      color: var(--muted);
-      font-size: 1rem;
-      font-weight: bold;
-      border: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-    .nav-btn.active { color: var(--red); }
-    .calendar { margin-bottom: 14px; }
-    .calendar-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: var(--muted); font-size: 0.8rem; margin-bottom: 4px; }
-    .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
-    .day-cell {
-      aspect-ratio: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      position: relative;
-      background: #2b3a4a;
-      cursor: pointer;
-    }
-    .day-cell.selected { outline: 2px solid var(--red); }
-    .day-cell.today { background: #3d5060; }
-    .day-cell.has-record::after {
-      content: '';
-      width: 6px; height: 6px;
-      background: var(--red);
-      border-radius: 50%;
-      position: absolute;
-      bottom: 4px;
-    }
-    .match-list { max-height: 400px; overflow-y: auto; }
-    .match-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 0;
-      border-bottom: 1px solid #2b3a4a;
-      gap: 6px;
-    }
-    .match-item:last-child { border-bottom: none; }
-    .match-info { flex: 2; }
-    .match-actions { display: flex; gap: 8px; }
-    .day-summary { margin-top: 10px; color: var(--muted); font-size: 0.9rem; }
-    canvas { width: 100% !important; height: auto !important; }
-    .heatmap { display: flex; flex-direction: column; gap: 4px; }
-    .month-row { display: flex; align-items: center; }
-    .month-label { width: 35px; font-size: 0.75rem; color: var(--muted); }
-    .days { display: flex; flex-wrap: wrap; gap: 2px; }
-    .hcell {
-      width: 12px; height: 12px;
-      border-radius: 2px;
-      background: #2b3a4a;
-    }
-    .edit-input { width: 60px; margin: 0 4px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📚 阅读摘抄助手 - 好句好词收藏</title>
+    <style>
+        :root {
+            --bg: #fdf6ec;
+            --card-bg: #fffef9;
+            --text: #3e3232;
+            --text-secondary: #6b5e5e;
+            --accent: #c77d4b;
+            --accent-hover: #a85d2f;
+            --accent-light: #fdf0e4;
+            --border: #e8d9c8;
+            --shadow: 0 2px 12px rgba(120, 80, 40, 0.08);
+            --shadow-lg: 0 8px 32px rgba(100, 60, 30, 0.12);
+            --tag-bg: #f5ebe0;
+            --tag-text: #8b5e3c;
+            --star-empty: #d4c4b0;
+            --star-filled: #e8a840;
+            --danger: #c0392b;
+            --danger-bg: #fdecea;
+            --success: #5d8a5e;
+            --success-bg: #edf5ed;
+            --input-bg: #fffefb;
+            --scrollbar-thumb: #d4c4b0;
+            --scrollbar-track: #f5ede2;
+            --sentence-hover: #fdf5ea;
+            --sentence-collected: #fefaf3;
+            --tab-active-bg: #fffef9;
+            --tab-inactive-bg: #f7f0e6;
+            --overlay: rgba(60, 30, 10, 0.4);
+            --modal-bg: #fffef9;
+            --highlight-mark: #ffe69c;
+        }
+        [data-theme="dark"] {
+            --bg: #1e1b18;
+            --card-bg: #2a2520;
+            --text: #e0d6cc;
+            --text-secondary: #b0a599;
+            --accent: #d4956a;
+            --accent-hover: #e8a87c;
+            --accent-light: #3a2a1c;
+            --border: #3d342c;
+            --shadow: 0 2px 12px rgba(0,0,0,0.3);
+            --tag-bg: #3a3028;
+            --tag-text: #c4a88c;
+            --star-empty: #5a4d3e;
+            --danger-bg: #3a1f1c;
+            --input-bg: #2c2620;
+            --scrollbar-thumb: #4a3d30;
+            --scrollbar-track: #2a231d;
+            --sentence-hover: #302820;
+            --sentence-collected: #352a1f;
+            --tab-active-bg: #2a2520;
+            --tab-inactive-bg: #221e19;
+            --overlay: rgba(0,0,0,0.6);
+            --modal-bg: #2a2520;
+            --highlight-mark: #5a4a20;
+        }
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:0.3s;}
+        ::-webkit-scrollbar{width:6px;height:6px;}
+        ::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+        ::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:3px;}
+        .header{background:var(--card-bg);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow);}
+        .logo{display:flex;align-items:center;gap:10px;font-size:1.35rem;font-weight:700;color:var(--accent);}
+        .logo .icon{font-size:1.6rem;}
+        .header-actions{display:flex;gap:10px;flex-wrap:wrap;}
+        .btn{padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);cursor:pointer;font-size:0.9rem;display:inline-flex;align-items:center;gap:6px;transition:0.2s;}
+        .btn:hover{background:var(--accent-light);border-color:var(--accent);color:var(--accent);}
+        .btn.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600;}
+        .btn.btn-primary:hover{background:var(--accent-hover);}
+        .btn.btn-sm{padding:5px 12px;font-size:0.8rem;border-radius:16px;}
+        .btn.btn-danger{background:var(--danger-bg);color:var(--danger);border-color:transparent;}
+        .btn.btn-danger:hover{background:var(--danger);color:#fff;}
+        .theme-toggle{background:transparent;border:1px solid var(--border);border-radius:50%;width:38px;height:38px;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;color:var(--text);}
+        .main-container{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px 24px;max-width:1400px;margin:0 auto;}
+        @media(max-width:900px){.main-container{grid-template-columns:1fr;padding:12px;}}
+        .panel{background:var(--card-bg);border-radius:16px;border:1px solid var(--border);box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:400px;}
+        .panel-header{padding:16px 20px;border-bottom:1px solid var(--border);font-weight:700;display:flex;justify-content:space-between;background:var(--card-bg);}
+        .panel-body{padding:16px 20px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
+        .source-input-row{display:flex;gap:10px;}
+        .source-input-row input{flex:1;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);}
+        textarea{width:100%;min-height:180px;padding:14px 16px;border-radius:12px;border:2px dashed var(--border);background:var(--input-bg);color:var(--text);resize:vertical;font-family:inherit;}
+        textarea:focus{outline:none;border-color:var(--accent);}
+        .sentence-list{list-style:none;display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;}
+        .sentence-item{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:10px;border:1px solid transparent;transition:0.2s;}
+        .sentence-item:hover{background:var(--sentence-hover);}
+        .sentence-item.collected{background:var(--sentence-collected);border-color:#e8c84a;}
+        .star-btn{flex-shrink:0;font-size:1.2rem;cursor:pointer;color:var(--star-empty);}
+        .star-btn.filled{color:var(--star-filled);}
+        .tabs{display:flex;gap:4px;border-bottom:2px solid var(--border);margin-bottom:4px;}
+        .tab-btn{padding:10px 20px;border:none;background:var(--tab-inactive-bg);color:var(--text-secondary);font-weight:600;border-radius:12px 12px 0 0;cursor:pointer;}
+        .tab-btn.active{background:var(--tab-active-bg);color:var(--accent);border:2px solid var(--border);border-bottom-color:var(--tab-active-bg);}
+        .tab-panel{display:none;flex-direction:column;gap:10px;overflow-y:auto;max-height:420px;}
+        .tab-panel.active{display:flex;}
+        .collection-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;}
+        .card-meta{font-size:0.78rem;color:var(--text-secondary);}
+        .tag{display:inline-block;padding:3px 10px;border-radius:14px;font-size:0.73rem;background:var(--tag-bg);color:var(--tag-text);cursor:pointer;}
+        .tag.selected{background:var(--accent);color:#fff;}
+        .search-bar-wrapper{display:flex;gap:8px;}
+        .search-inner{position:relative;flex:1;}
+        .search-inner input{width:100%;padding:9px 36px;border-radius:22px;border:2px solid var(--border);background:var(--input-bg);color:var(--text);}
+        .search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;display:none;}
+        .search-clear.visible{display:block;}
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--overlay);z-index:300;display:flex;align-items:center;justify-content:center;}
+        .modal{background:var(--modal-bg);border-radius:16px;padding:24px;width:90%;max-width:480px;box-shadow:var(--shadow-lg);max-height:80vh;overflow-y:auto;}
+        .tag-manage-item{display:inline-flex;align-items:center;gap:5px;background:var(--tag-bg);padding:4px 10px;border-radius:14px;margin:4px;}
+        .tag-delete{cursor:pointer;font-weight:bold;color:var(--danger);background:none;border:none;}
+        .toast-container{position:fixed;top:20px;right:20px;z-index:500;}
+        .toast{background:var(--accent);color:#fff;padding:12px 20px;border-radius:24px;margin-bottom:8px;animation:slideIn 0.3s;}
+        @keyframes slideIn{from{transform:translateX(100%);}to{transform:translateX(0);}}
+        mark{background:var(--highlight-mark);padding:1px 3px;border-radius:3px;}
+    </style>
 </head>
 <body>
-  <div class="header">
-    <h1>🎯 死斗打卡</h1>
-    <span id="streak" class="streak">🔥 0天</span>
-  </div>
-
-  <!-- 打卡页 -->
-  <div id="page-log" class="page active">
-    <div class="card">
-      <div class="stat-row">
-        <div class="stat-item">
-          <div class="stat-label">今日局数</div>
-          <div class="stat-value" id="todayCount">0</div>
+    <header class="header">
+        <div class="logo"><span class="icon">📚</span>阅读摘抄助手</div>
+        <div class="header-actions">
+            <button class="btn btn-sm" onclick="exportData()">💾 导出</button>
+            <button class="btn btn-sm" onclick="document.getElementById('importFile').click()">📥 导入</button>
+            <input type="file" id="importFile" accept=".json" hidden onchange="importData(event)">
+            <button class="btn btn-sm btn-danger" onclick="clearAllData()">🗑️ 清空</button>
+            <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
         </div>
-        <div class="stat-item">
-          <div class="stat-label">今日K/D</div>
-          <div class="stat-value" id="todayKd">-</div>
-        </div>
-      </div>
-      <div id="goalProgress" style="font-size:0.9rem; margin-top:10px;"></div>
-    </div>
-    <div class="card">
-      <h3 style="margin-bottom:10px;">✍️ 记录本局</h3>
-      <div class="flex" style="justify-content:center; margin-bottom:12px;">
-        <input type="number" id="killInput" value="20" min="0" placeholder="击杀">
-        <input type="number" id="deathInput" value="15" min="0" placeholder="死亡">
-      </div>
-      <button id="saveMatchBtn">➕ 记录本局</button>
-    </div>
-    <div class="card">
-      <h3 style="margin-bottom:10px;">🎯 每日目标</h3>
-      <div class="flex">
-        <input type="number" id="goalMatches" value="20" min="1" style="width:70px;"> 局
-        <input type="number" id="goalKd" value="1.2" step="0.1" style="width:80px;"> K/D
-        <button class="secondary" onclick="saveGoal()" style="width:auto; padding:10px 16px;">保存目标</button>
-      </div>
-    </div>
-    <div class="card">
-      <h3>📈 近14天K/D</h3>
-      <canvas id="trendChart" height="180"></canvas>
-    </div>
-    <div class="card">
-      <h3>📅 年度热力图</h3>
-      <div id="heatmap" class="heatmap"></div>
-    </div>
-    <!-- 数据管理卡片 -->
-    <div class="card">
-      <h3 style="margin-bottom:10px;">⚙️ 数据管理</h3>
-      <div class="flex" style="gap:12px;">
-        <button onclick="exportData()" class="secondary" style="flex:1;">📤 导出数据</button>
-        <button onclick="document.getElementById('importFile').click()" class="secondary" style="flex:1;">📥 导入数据</button>
-        <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importData(event)">
-      </div>
-    </div>
-  </div>
+    </header>
 
-  <!-- 历史页 -->
-  <div id="page-history" class="page">
-    <div class="card calendar">
-      <div class="calendar-header">
-        <button onclick="changeMonth(-1)" style="width:auto; background:#2b3a4a; padding:6px 12px;">◀</button>
-        <span id="currentMonthLabel" style="font-weight:bold;"></span>
-        <button onclick="changeMonth(1)" style="width:auto; background:#2b3a4a; padding:6px 12px;">▶</button>
-      </div>
-      <div class="weekdays">
-        <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
-      </div>
-      <div id="calendarGrid" class="days-grid"></div>
-    </div>
-    <div class="card">
-      <h3 id="selectedDateTitle">选择日期查看详情</h3>
-      <div id="matchList" class="match-list"></div>
-      <div id="daySummary" class="day-summary"></div>
-    </div>
-  </div>
-
-  <!-- 底部导航 -->
-  <div class="nav">
-    <button class="nav-btn active" onclick="switchPage('log')">🎯 打卡</button>
-    <button class="nav-btn" onclick="switchPage('history')">📅 历史</button>
-  </div>
-
-  <script>
-    // ================= 数据存储 =================
-    const STORAGE = 'dm_matches';
-    const GOAL_STORAGE = 'dm_goal';
-    let matches = JSON.parse(localStorage.getItem(STORAGE) || '[]');
-    let goal = JSON.parse(localStorage.getItem(GOAL_STORAGE)) || { matches: 20, kd: 1.2 };
-
-    const todayStr = () => new Date().toISOString().slice(0,10);
-
-    function saveData() { localStorage.setItem(STORAGE, JSON.stringify(matches)); }
-    function saveGoal() {
-      goal.matches = parseInt(document.getElementById('goalMatches').value) || 20;
-      goal.kd = parseFloat(document.getElementById('goalKd').value) || 1.2;
-      localStorage.setItem(GOAL_STORAGE, JSON.stringify(goal));
-      refreshLogPage();
-    }
-
-    // ================= 页面切换 =================
-    function switchPage(page) {
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      document.getElementById(`page-${page}`).classList.add('active');
-      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-      document.querySelector(`.nav-btn:nth-child(${page === 'log' ? 1 : 2})`).classList.add('active');
-      if (page === 'log') refreshLogPage();
-      if (page === 'history') refreshHistoryPage();
-    }
-
-    // ================= 打卡页逻辑 =================
-    function getTodayMatches() {
-      return matches.filter(m => m.date === todayStr());
-    }
-
-    function refreshLogPage() {
-      const todayMatches = getTodayMatches();
-      const count = todayMatches.length;
-      const kills = todayMatches.reduce((s,m)=>s+m.kills, 0);
-      const deaths = todayMatches.reduce((s,m)=>s+m.deaths, 0);
-      const kd = deaths > 0 ? (kills/deaths).toFixed(2) : kills;
-
-      document.getElementById('todayCount').textContent = count;
-      document.getElementById('todayKd').textContent = count ? kd : '-';
-      document.getElementById('streak').textContent = `🔥 连续${getStreak()}天`;
-
-      const progress = document.getElementById('goalProgress');
-      let msgs = [];
-      if (count < goal.matches) msgs.push(`⚠️ 还差 ${goal.matches - count} 局`);
-      if (count && parseFloat(kd) < goal.kd) msgs.push(`K/D ${kd} 低于目标`);
-      if (msgs.length === 0 && count) msgs.push('✨ 今日目标达成！');
-      else if (!count) msgs.push('📝 今天还没记录');
-      progress.textContent = msgs.join(' · ');
-
-      document.getElementById('goalMatches').value = goal.matches;
-      document.getElementById('goalKd').value = goal.kd;
-
-      drawTrend();
-      drawHeatmap();
-    }
-
-    function addMatch() {
-      const kills = parseInt(document.getElementById('killInput').value) || 0;
-      const deaths = parseInt(document.getElementById('deathInput').value) || 0;
-      matches.push({ date: todayStr(), kills, deaths });
-      saveData();
-      refreshLogPage();
-      checkGoalNotification();
-    }
-
-    function getStreak() {
-      const uniqueDates = [...new Set(matches.map(m=>m.date))].sort().reverse();
-      if (!uniqueDates.length || uniqueDates[0] !== todayStr()) return 0;
-      let s = 1;
-      for (let i=1; i<uniqueDates.length; i++) {
-        const diff = (new Date(uniqueDates[i-1]) - new Date(uniqueDates[i])) / 86400000;
-        if (diff === 1) s++;
-        else break;
-      }
-      return s;
-    }
-
-    function checkGoalNotification() {
-      if (!("Notification" in window) || Notification.permission !== "granted") return;
-      const t = getTodayMatches();
-      const kills = t.reduce((s,m)=>s+m.kills,0);
-      const deaths = t.reduce((s,m)=>s+m.deaths,0);
-      const kd = deaths ? kills/deaths : kills;
-      if (t.length >= goal.matches && kd >= goal.kd) {
-        new Notification("🎉 今日死斗目标达成！", { body: `${t.length}局 · K/D ${kd.toFixed(2)}` });
-      }
-    }
-
-    // 趋势图
-    let trendChart;
-    function drawTrend() {
-      const days = 14, today = new Date();
-      const labels = [], kdArr = [];
-      for (let i=days-1; i>=0; i--) {
-        const d = new Date(today);
-        d.setDate(d.getDate()-i);
-        const ds = d.toISOString().slice(0,10);
-        const dayMatches = matches.filter(m=>m.date===ds);
-        const kills = dayMatches.reduce((s,m)=>s+m.kills,0);
-        const deaths = dayMatches.reduce((s,m)=>s+m.deaths,0);
-        labels.push(`${d.getMonth()+1}/${d.getDate()}`);
-        kdArr.push(deaths ? kills/deaths : (kills || null));
-      }
-      const ctx = document.getElementById('trendChart').getContext('2d');
-      if (trendChart) trendChart.destroy();
-      trendChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{ label:'K/D', data:kdArr, borderColor:'#ff4655', tension:0.2, spanGaps:false }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: true,
-          scales: { y: { min:0, title:{display:true,text:'K/D'} } }
-        }
-      });
-    }
-
-    // 热力图
-    function drawHeatmap() {
-      const container = document.getElementById('heatmap');
-      container.innerHTML = '';
-      const year = new Date().getFullYear();
-      const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-      for (let m=0; m<12; m++) {
-        const row = document.createElement('div'); row.className='month-row';
-        const label = document.createElement('span'); label.className='month-label'; label.textContent=months[m];
-        row.appendChild(label);
-        const daysDiv = document.createElement('div'); daysDiv.className='days';
-        const dim = new Date(year, m+1, 0).getDate();
-        for (let d=1; d<=dim; d++) {
-          const ds = `${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-          const cnt = matches.filter(m=>m.date===ds).length;
-          const cell = document.createElement('div'); cell.className='hcell';
-          if (cnt>0) cell.style.backgroundColor = `rgba(255,70,85,${0.3+cnt*0.08})`;
-          if (ds===todayStr()) cell.style.outline='2px solid white';
-          cell.title = `${ds}: ${cnt}局`;
-          daysDiv.appendChild(cell);
-        }
-        row.appendChild(daysDiv);
-        container.appendChild(row);
-      }
-    }
-
-    // ================= 历史页逻辑 =================
-    let calYear, calMonth, selectedDate = todayStr();
-    (function initCalendar() {
-      const now = new Date();
-      calYear = now.getFullYear();
-      calMonth = now.getMonth();
-    })();
-
-    function renderCalendar() {
-      document.getElementById('currentMonthLabel').textContent = `${calYear}年 ${calMonth+1}月`;
-      const grid = document.getElementById('calendarGrid');
-      grid.innerHTML = '';
-      const firstDay = new Date(calYear, calMonth, 1).getDay();
-      const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
-      for (let i=0; i<firstDay; i++) grid.appendChild(document.createElement('div'));
-      for (let d=1; d<=daysInMonth; d++) {
-        const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const cell = document.createElement('div');
-        cell.className = 'day-cell';
-        cell.textContent = d;
-        if (ds === todayStr()) cell.classList.add('today');
-        if (ds === selectedDate) cell.classList.add('selected');
-        if (matches.some(m=>m.date===ds)) cell.classList.add('has-record');
-        cell.onclick = () => { selectedDate = ds; renderCalendar(); showDateDetail(); };
-        grid.appendChild(cell);
-      }
-    }
-
-    function showDateDetail() {
-      document.getElementById('selectedDateTitle').textContent = `📋 ${selectedDate}`;
-      const dayMatches = matches.filter(m=>m.date===selectedDate);
-      const list = document.getElementById('matchList');
-      const summaryDiv = document.getElementById('daySummary');
-
-      if (!dayMatches.length) {
-        list.innerHTML = '<div style="color:var(--muted); padding:20px 0; text-align:center;">当天无记录</div>';
-        summaryDiv.textContent = '';
-        return;
-      }
-
-      // 构建列表，包含编辑和删除按钮
-      list.innerHTML = dayMatches.map((m, idx) => {
-        // 找到该比赛在整个 matches 数组中的真实索引，以便后续操作
-        const realIndex = matches.indexOf(m);
-        return `
-          <div class="match-item" id="match-${realIndex}">
-            <div class="match-info">
-              <span>第${idx+1}局</span>
-              <span>${m.kills}杀 / ${m.deaths}死</span>
-              <span>K/D ${m.deaths ? (m.kills/m.deaths).toFixed(2) : m.kills}</span>
+    <div class="main-container">
+        <div class="panel">
+            <div class="panel-header"><span class="panel-title">📝 文本输入</span></div>
+            <div class="panel-body">
+                <div class="source-input-row">
+                    <input type="text" id="sourceInput" placeholder="书名/来源（可选）">
+                    <button class="btn btn-sm" onclick="clearInput()">清空</button>
+                </div>
+                <textarea id="textInput" placeholder="在此粘贴小说段落，点击「拆分句子」预览..."></textarea>
+                <button class="btn btn-primary" id="parseBtn">✨ 拆分句子</button>
+                <div>句子预览：</div>
+                <ul class="sentence-list" id="sentenceList"><li class="empty-state">暂无句子</li></ul>
             </div>
-            <div class="match-actions">
-              <button class="small secondary" onclick="editMatch(${realIndex})">✏️</button>
-              <button class="small" onclick="deleteMatch(${realIndex})">🗑️</button>
+        </div>
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title">💎 收藏库</span>
+                <span><span id="sentCount">0</span> 句 · <span id="wordCount">0</span> 词</span>
             </div>
-          </div>
-        `;
-      }).join('');
-
-      // 当日汇总
-      const kills = dayMatches.reduce((s,m)=>s+m.kills,0);
-      const deaths = dayMatches.reduce((s,m)=>s+m.deaths,0);
-      summaryDiv.textContent = `当日总计: ${kills}杀 ${deaths}死 · K/D ${deaths ? (kills/deaths).toFixed(2) : kills}`;
-    }
-
-    // 删除单局
-    function deleteMatch(index) {
-      if (!confirm('确定要删除这局记录吗？')) return;
-      matches.splice(index, 1);
-      saveData();
-      // 刷新历史页及打卡页
-      refreshHistoryPage();
-      refreshLogPage();
-    }
-
-    // 编辑单局
-    function editMatch(index) {
-      const match = matches[index];
-      const itemDiv = document.getElementById(`match-${index}`);
-      if (!itemDiv) return;
-      itemDiv.innerHTML = `
-        <div class="match-info" style="display:flex; align-items:center; gap:6px;">
-          击杀 <input type="number" class="edit-input" id="editKills-${index}" value="${match.kills}" min="0">
-          死亡 <input type="number" class="edit-input" id="editDeaths-${index}" value="${match.deaths}" min="0">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="sentences">✨ 好句库</button>
+                <button class="tab-btn" data-tab="words">🔤 好词库</button>
+            </div>
+            <div class="panel-body">
+                <div class="search-bar-wrapper">
+                    <div class="search-inner">
+                        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);">🔍</span>
+                        <input type="text" id="searchInput" placeholder="搜索...">
+                        <button class="search-clear" id="searchClearBtn">✕</button>
+                    </div>
+                </div>
+                <div id="filterTagsRow">
+                    <span>标签：</span>
+                    <span class="tag" data-tag="">全部</span>
+                    <button class="btn btn-sm" id="manageTagsBtn">⚙️ 管理</button>
+                </div>
+                <div class="tab-panel active" id="panelSentences"></div>
+                <div class="tab-panel" id="panelWords"></div>
+            </div>
         </div>
-        <div class="match-actions">
-          <button class="small secondary" onclick="saveEdit(${index})">💾 保存</button>
-          <button class="small" onclick="cancelEdit(${index})">❌ 取消</button>
+    </div>
+
+    <!-- 编辑弹窗 -->
+    <div class="modal-overlay" id="editModal" style="display:none;">
+        <div class="modal">
+            <h3>✏️ 编辑收藏</h3>
+            <textarea id="editText" rows="3"></textarea>
+            <input type="text" id="editSource" placeholder="来源">
+            <div id="editTags" style="margin:8px 0;"></div>
+            <textarea id="editNote" placeholder="笔记" rows="2"></textarea>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn" onclick="closeEditModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveEdit()">保存</button>
+            </div>
         </div>
-      `;
-    }
+    </div>
 
-    function saveEdit(index) {
-      const kills = parseInt(document.getElementById(`editKills-${index}`).value) || 0;
-      const deaths = parseInt(document.getElementById(`editDeaths-${index}`).value) || 0;
-      matches[index].kills = kills;
-      matches[index].deaths = deaths;
-      saveData();
-      refreshHistoryPage();
-      refreshLogPage();
-    }
+    <!-- 标签管理弹窗 -->
+    <div class="modal-overlay" id="tagManagerModal" style="display:none;">
+        <div class="modal">
+            <h3>⚙️ 管理标签</h3>
+            <div id="tagManageList" style="margin:12px 0;"></div>
+            <div style="display:flex;gap:8px;">
+                <input type="text" id="newTagInput" placeholder="新标签名称" style="flex:1;padding:8px 12px;border-radius:20px;border:1px solid var(--border);">
+                <button class="btn btn-primary btn-sm" id="addTagBtn">➕ 添加</button>
+            </div>
+            <div style="text-align:right;margin-top:12px;">
+                <button class="btn" onclick="closeTagManager()">完成</button>
+            </div>
+        </div>
+    </div>
 
-    function cancelEdit(index) {
-      // 简单地重新渲染列表即可恢复
-      refreshHistoryPage();
-    }
+    <div class="toast-container" id="toastContainer"></div>
 
-    function changeMonth(delta) {
-      calMonth += delta;
-      if (calMonth < 0) { calMonth = 11; calYear--; }
-      else if (calMonth > 11) { calMonth = 0; calYear++; }
-      renderCalendar();
-      selectedDate = `${calYear}-${String(calMonth+1).padStart(2,'0')}-01`;
-      showDateDetail();
-    }
+    <script>
+        (function() {
+            const STORAGE_KEY = 'rc_data';
+            const SETTINGS_KEY = 'rc_settings';
+            let data = { sentences: [], words: [] };
+            let settings = {
+                theme: 'light',
+                currentTab: 'sentences',
+                filterTag: '',
+                lastSource: '',
+                availableTags: ['人物描写', '景物描写', '心理描写', '对话', '哲理感悟', '优美语句']
+            };
 
-    function refreshHistoryPage() {
-      renderCalendar();
-      showDateDetail();
-    }
+            function loadData() {
+                try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) data = JSON.parse(raw); } catch (e) {}
+            }
+            function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+            function loadSettings() {
+                try { const raw = localStorage.getItem(SETTINGS_KEY); if (raw) settings = Object.assign(settings, JSON.parse(raw)); } catch (e) {}
+            }
+            function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
 
-    // ================= 导出/导入 =================
-    function exportData() {
-      const data = { matches, goal };
-      const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `死斗打卡_备份_${new Date().toISOString().slice(0,10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+            function applyTheme() {
+                document.documentElement.setAttribute('data-theme', settings.theme);
+                document.querySelector('.theme-toggle').textContent = settings.theme === 'dark' ? '☀️' : '🌙';
+            }
+            window.toggleTheme = () => { settings.theme = settings.theme === 'dark' ? 'light' : 'dark'; applyTheme(); saveSettings(); };
 
-    function importData(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      if (!confirm('导入数据会覆盖当前所有记录和目标，确定继续吗？')) {
-        event.target.value = '';
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const data = JSON.parse(e.target.result);
-          if (data.matches && Array.isArray(data.matches) && data.goal) {
-            matches = data.matches;
-            goal = data.goal;
-            saveData();
-            localStorage.setItem(GOAL_STORAGE, JSON.stringify(goal));
-            alert('导入成功！');
-            refreshLogPage();
-            refreshHistoryPage();
-          } else {
-            alert('文件格式不正确，需包含 matches 数组和 goal 对象。');
-          }
-        } catch (err) {
-          alert('读取文件失败，请确认是有效的 JSON 文件。');
-        }
-        event.target.value = '';
-      };
-      reader.readAsText(file);
-    }
+            function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+            function showToast(msg) {
+                const toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = msg;
+                document.getElementById('toastContainer').appendChild(toast);
+                setTimeout(() => toast.remove(), 2500);
+            }
 
-    // ================= 初始化 =================
-    document.getElementById('saveMatchBtn').addEventListener('click', addMatch);
-    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+            // ---------- 拆分句子 ----------
+            function parseSentences() {
+                const text = document.getElementById('textInput').value.trim();
+                if (!text) return showToast('请先粘贴文本');
+                settings.lastSource = document.getElementById('sourceInput').value.trim();
+                saveSettings();
+                const raw = text.replace(/[\n\r]+/g, '‖').split(/[。！？.!?…]+/).flatMap(s => s.split('‖')).map(s => s.trim()).filter(s => s);
+                const sentences = [];
+                raw.forEach(s => {
+                    if (s.length > 80 && s.includes('，')) {
+                        const parts = s.split(/[，,；;]+/).map(p => p.trim()).filter(p => p);
+                        parts.some(p => p.length < 5) ? sentences.push(s) : sentences.push(...parts);
+                    } else sentences.push(s);
+                });
+                const unique = sentences.filter((s, i) => i === 0 || s !== sentences[i-1]);
+                renderSentenceList(unique);
+                showToast(`✅ 已拆分出 ${unique.length} 个句子`);
+            }
 
-    // 动态生成 manifest 实现完整 PWA 安装体验
-    (function() {
-      const manifest = {
-        name: '死斗打卡',
-        short_name: '死斗打卡',
-        start_url: location.href,
-        display: 'standalone',
-        background_color: '#0f1923',
-        theme_color: '#0f1923',
-        icons: [{
-          src: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><rect width="192" height="192" rx="32" fill="#0f1923"/><text x="96" y="110" font-size="100" text-anchor="middle" fill="#ff4655">🎯</text></svg>'),
-          sizes: '192x192',
-          type: 'image/svg+xml'
-        }]
-      };
-      const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-      const link = document.createElement('link');
-      link.rel = 'manifest';
-      link.href = URL.createObjectURL(blob);
-      document.head.appendChild(link);
-    })();
+            function renderSentenceList(sentences) {
+                const list = document.getElementById('sentenceList');
+                const collectedSet = new Set(data.sentences.map(s => s.text.trim()));
+                list.innerHTML = sentences.map(s => {
+                    const collected = collectedSet.has(s);
+                    return `<li class="sentence-item ${collected ? 'collected' : ''}">
+                        <span class="star-btn ${collected ? 'filled' : ''}" data-text="${escapeHtml(s)}">${collected ? '⭐' : '☆'}</span>
+                        <span class="sentence-text">${escapeHtml(s)}</span></li>`;
+                }).join('');
+                list.querySelectorAll('.star-btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const text = this.dataset.text;
+                        if (this.classList.contains('filled')) {
+                            data.sentences = data.sentences.filter(s => s.text.trim() !== text);
+                            this.classList.remove('filled'); this.textContent = '☆';
+                            this.closest('.sentence-item').classList.remove('collected');
+                            showToast('已取消收藏');
+                        } else {
+                            data.sentences.unshift({ id: Date.now().toString(36)+Math.random().toString(36).substr(2,5), text, source: document.getElementById('sourceInput').value.trim(), tags: [], note: '', createdAt: Date.now() });
+                            this.classList.add('filled'); this.textContent = '⭐';
+                            this.closest('.sentence-item').classList.add('collected');
+                            showToast('⭐ 已收藏');
+                        }
+                        saveData(); updateCounts(); renderCollection();
+                    });
+                });
+            }
 
-    refreshLogPage();
-  </script>
+            // 选中添加好词
+            document.addEventListener('mouseup', function(e) {
+                setTimeout(() => {
+                    const sel = window.getSelection(); const text = sel ? sel.toString().trim() : '';
+                    const bubble = document.getElementById('wordBubble') || createBubble();
+                    if (text && text.length >= 1 && text.length <= 30) {
+                        bubble.style.display = 'block';
+                        bubble.textContent = `➕ 添加「${text.length>10?text.substring(0,10)+'…':text}」到好词库`;
+                        const rect = sel.getRangeAt(0).getBoundingClientRect();
+                        bubble.style.left = rect.left + rect.width/2 + 'px';
+                        bubble.style.top = rect.top - 15 + 'px';
+                        bubble.onclick = function() {
+                            addWord(text); bubble.style.display = 'none'; sel.removeAllRanges();
+                        };
+                    } else { bubble.style.display = 'none'; }
+                }, 50);
+            });
+            function createBubble() {
+                const bubble = document.createElement('div');
+                bubble.id = 'wordBubble';
+                bubble.style.cssText = 'position:fixed;background:var(--accent);color:#fff;padding:8px 14px;border-radius:20px;cursor:pointer;z-index:200;transform:translate(-50%,-120%);';
+                document.body.appendChild(bubble);
+                return bubble;
+            }
+            function addWord(word) {
+                if (data.words.find(w => w.text.trim() === word.trim())) return showToast('⚠️ 词语已存在');
+                data.words.unshift({ id: Date.now().toString(36)+Math.random().toString(36).substr(2,5), text: word.trim(), source: document.getElementById('sourceInput').value.trim(), tags: [], note: '', createdAt: Date.now() });
+                saveData(); updateCounts(); renderCollection(); showToast(`🔤 已添加「${word.trim()}」`);
+            }
+
+            // 收藏库渲染
+            function renderCollection() {
+                const query = document.getElementById('searchInput').value.trim().toLowerCase();
+                const tab = settings.currentTab;
+                let items = tab === 'sentences' ? [...data.sentences] : [...data.words];
+                if (query) items = items.filter(i => i.text.toLowerCase().includes(query) || (i.source||'').toLowerCase().includes(query) || (i.note||'').toLowerCase().includes(query) || (i.tags||[]).some(t=>t.toLowerCase().includes(query)));
+                if (settings.filterTag) items = items.filter(i => i.tags && i.tags.includes(settings.filterTag));
+                items.sort((a,b) => b.createdAt - a.createdAt);
+                const panel = document.getElementById(tab === 'sentences' ? 'panelSentences' : 'panelWords');
+                if (!items.length) { panel.innerHTML = '<div class="empty-state">暂无收藏</div>'; return; }
+                panel.innerHTML = items.map(item => {
+                    const tagsHtml = (item.tags||[]).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
+                    return `<div class="collection-card">
+                        <div class="card-text">${highlightText(item.text, query)}</div>
+                        <div class="card-meta">${item.source ? `<span>📖 ${escapeHtml(item.source)}</span>` : ''} ${new Date(item.createdAt).toLocaleString()}</div>
+                        ${tagsHtml ? `<div>${tagsHtml}</div>` : ''}
+                        <div style="display:flex;gap:6px;">
+                            <button class="btn btn-sm" data-action="copy" data-text="${escapeHtml(item.text)}">📋</button>
+                            <button class="btn btn-sm" data-action="edit" data-id="${item.id}" data-type="${tab==='sentences'?'sentence':'word'}">✏️</button>
+                            <button class="btn btn-sm btn-danger" data-action="delete" data-id="${item.id}" data-type="${tab==='sentences'?'sentence':'word'}">🗑️</button>
+                        </div></div>`;
+                }).join('');
+                panel.querySelectorAll('button[data-action]').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const action = this.dataset.action;
+                        if (action === 'copy') navigator.clipboard.writeText(this.dataset.text).then(()=>showToast('已复制'));
+                        else if (action === 'delete') deleteItem(this.dataset.type, this.dataset.id);
+                        else if (action === 'edit') openEditModal(this.dataset.type, this.dataset.id);
+                    });
+                });
+            }
+
+            function highlightText(text, query) {
+                if (!query) return escapeHtml(text);
+                return escapeHtml(text).replace(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`,'gi'), '<mark>$1</mark>');
+            }
+
+            function deleteItem(type, id) {
+                if (!confirm('确认删除？')) return;
+                if (type === 'sentence') data.sentences = data.sentences.filter(s => s.id !== id);
+                else data.words = data.words.filter(w => w.id !== id);
+                saveData(); updateCounts(); renderCollection(); showToast('已删除');
+            }
+
+            function openEditModal(type, id) {
+                const item = type === 'sentence' ? data.sentences.find(s => s.id === id) : data.words.find(w => w.id === id);
+                if (!item) return;
+                document.getElementById('editText').value = item.text;
+                document.getElementById('editSource').value = item.source || '';
+                document.getElementById('editNote').value = item.note || '';
+                const tagsDiv = document.getElementById('editTags');
+                tagsDiv.innerHTML = settings.availableTags.map(t => {
+                    const sel = (item.tags||[]).includes(t) ? 'selected' : '';
+                    return `<span class="tag ${sel}" data-tag="${t}">${t}</span>`;
+                }).join('');
+                document.getElementById('editModal').style.display = 'flex';
+                window._currentEdit = { type, id };
+            }
+            window.closeEditModal = () => { document.getElementById('editModal').style.display = 'none'; };
+            window.saveEdit = function() {
+                if (!window._currentEdit) return;
+                const { type, id } = window._currentEdit;
+                const text = document.getElementById('editText').value.trim();
+                if (!text) return showToast('内容不能为空');
+                const item = type === 'sentence' ? data.sentences.find(s => s.id === id) : data.words.find(w => w.id === id);
+                if (item) {
+                    item.text = text;
+                    item.source = document.getElementById('editSource').value.trim();
+                    item.note = document.getElementById('editNote').value.trim();
+                    item.tags = [...document.querySelectorAll('#editTags .tag.selected')].map(el => el.dataset.tag);
+                    saveData(); closeEditModal(); updateCounts(); renderCollection(); showToast('已保存');
+                }
+            };
+
+            function updateCounts() {
+                document.getElementById('sentCount').textContent = data.sentences.length;
+                document.getElementById('wordCount').textContent = data.words.length;
+            }
+
+            // ---------- 标签管理 ----------
+            function renderFilterTags() {
+                const container = document.getElementById('filterTagsRow');
+                container.querySelectorAll('.tag:not([data-tag=""])').forEach(t => t.remove());
+                const manageBtn = document.getElementById('manageTagsBtn');
+                settings.availableTags.forEach(tag => {
+                    const span = document.createElement('span');
+                    span.className = 'tag'; span.textContent = tag; span.dataset.tag = tag;
+                    span.addEventListener('click', () => setFilterTag(tag));
+                    container.insertBefore(span, manageBtn);
+                });
+            }
+            function setFilterTag(tag) {
+                settings.filterTag = tag; saveSettings();
+                document.querySelectorAll('#filterTagsRow .tag').forEach(t => t.classList.toggle('selected', t.dataset.tag === tag));
+                renderCollection();
+            }
+
+            document.getElementById('manageTagsBtn').addEventListener('click', () => {
+                document.getElementById('tagManagerModal').style.display = 'flex';
+                renderTagManageList();
+                document.getElementById('newTagInput').value = '';
+                document.getElementById('newTagInput').focus();
+            });
+            window.closeTagManager = () => document.getElementById('tagManagerModal').style.display = 'none';
+
+            function renderTagManageList() {
+                const list = document.getElementById('tagManageList');
+                list.innerHTML = settings.availableTags.map(tag => `
+                    <span class="tag-manage-item">
+                        ${escapeHtml(tag)}
+                        <button class="tag-delete" data-tag="${escapeHtml(tag)}">✕</button>
+                    </span>`).join('');
+                list.querySelectorAll('.tag-delete').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const tag = this.dataset.tag;
+                        if (!confirm(`删除标签「${tag}」？所有收藏中的此标签也会移除。`)) return;
+                        settings.availableTags = settings.availableTags.filter(t => t !== tag);
+                        data.sentences.forEach(s => { if (s.tags) s.tags = s.tags.filter(t => t !== tag); });
+                        data.words.forEach(w => { if (w.tags) w.tags = w.tags.filter(t => t !== tag); });
+                        if (settings.filterTag === tag) settings.filterTag = '';
+                        saveSettings(); saveData(); renderFilterTags(); renderCollection(); renderTagManageList();
+                        showToast(`已删除标签「${tag}」`);
+                    });
+                });
+            }
+
+            document.getElementById('addTagBtn').addEventListener('click', () => {
+                const input = document.getElementById('newTagInput');
+                const tag = input.value.trim();
+                if (!tag) return showToast('请输入标签名称');
+                if (settings.availableTags.includes(tag)) return showToast('标签已存在');
+                settings.availableTags.push(tag);
+                saveSettings(); renderFilterTags(); renderTagManageList(); input.value = ''; input.focus();
+                showToast(`已添加标签「${tag}」`);
+            });
+
+            // 标签页切换
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    settings.currentTab = this.dataset.tab; saveSettings();
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    document.getElementById('panelSentences').classList.toggle('active', settings.currentTab === 'sentences');
+                    document.getElementById('panelWords').classList.toggle('active', settings.currentTab === 'words');
+                    renderCollection();
+                });
+            });
+
+            document.getElementById('searchInput').addEventListener('input', renderCollection);
+            document.getElementById('searchClearBtn').addEventListener('click', () => {
+                document.getElementById('searchInput').value = ''; renderCollection();
+            });
+
+            window.exportData = () => {
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '摘抄备份.json'; a.click();
+            };
+            window.importData = (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const imported = JSON.parse(ev.target.result);
+                        if (imported.sentences && imported.words) {
+                            if (confirm('导入将替换当前数据，确定？')) data = imported;
+                            else {
+                                const existSent = new Set(data.sentences.map(s => s.text));
+                                const existWord = new Set(data.words.map(w => w.text));
+                                imported.sentences.forEach(s => { if (!existSent.has(s.text)) data.sentences.push(s); });
+                                imported.words.forEach(w => { if (!existWord.has(w.text)) data.words.push(w); });
+                            }
+                            saveData(); updateCounts(); renderCollection(); showToast('导入成功');
+                        }
+                    } catch (err) { showToast('文件格式错误'); }
+                };
+                reader.readAsText(file); e.target.value = '';
+            };
+            window.clearAllData = () => {
+                if (confirm('清空所有收藏？不可恢复！')) { data = { sentences: [], words: [] }; saveData(); updateCounts(); renderCollection(); showToast('已清空'); }
+            };
+            window.clearInput = () => {
+                document.getElementById('textInput').value = '';
+                document.getElementById('sentenceList').innerHTML = '<li class="empty-state">暂无句子</li>';
+            };
+
+            document.getElementById('parseBtn').addEventListener('click', parseSentences);
+
+            // 初始化
+            loadData(); loadSettings(); applyTheme(); updateCounts(); renderFilterTags(); renderCollection();
+            if (settings.lastSource) document.getElementById('sourceInput').value = settings.lastSource;
+            if (settings.currentTab) {
+                document.querySelector(`.tab-btn[data-tab="${settings.currentTab}"]`).click();
+            }
+        })();
+    </script>
 </body>
 </html>
