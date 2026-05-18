@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📚 阅读摘抄助手 - 好句好词收藏</title>
+    <title>📚 阅读摘抄助手 - 标签修复版</title>
     <style>
         :root {
             --bg: #fdf6ec;
@@ -23,16 +23,7 @@
             --danger: #c0392b;
             --danger-bg: #fdecea;
             --success: #5d8a5e;
-            --success-bg: #edf5ed;
             --input-bg: #fffefb;
-            --scrollbar-thumb: #d4c4b0;
-            --scrollbar-track: #f5ede2;
-            --sentence-hover: #fdf5ea;
-            --sentence-collected: #fefaf3;
-            --tab-active-bg: #fffef9;
-            --tab-inactive-bg: #f7f0e6;
-            --overlay: rgba(60, 30, 10, 0.4);
-            --modal-bg: #fffef9;
             --highlight-mark: #ffe69c;
         }
         [data-theme="dark"] {
@@ -50,21 +41,13 @@
             --star-empty: #5a4d3e;
             --danger-bg: #3a1f1c;
             --input-bg: #2c2620;
-            --scrollbar-thumb: #4a3d30;
-            --scrollbar-track: #2a231d;
-            --sentence-hover: #302820;
-            --sentence-collected: #352a1f;
-            --tab-active-bg: #2a2520;
-            --tab-inactive-bg: #221e19;
-            --overlay: rgba(0,0,0,0.6);
-            --modal-bg: #2a2520;
             --highlight-mark: #5a4a20;
         }
         *{margin:0;padding:0;box-sizing:border-box;}
         body{font-family:"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:0.3s;}
         ::-webkit-scrollbar{width:6px;height:6px;}
-        ::-webkit-scrollbar-track{background:var(--scrollbar-track);}
-        ::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:3px;}
+        ::-webkit-scrollbar-track{background:var(--bg);}
+        ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
         .header{background:var(--card-bg);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow);}
         .logo{display:flex;align-items:center;gap:10px;font-size:1.35rem;font-weight:700;color:var(--accent);}
         .logo .icon{font-size:1.6rem;}
@@ -82,34 +65,29 @@
         .panel{background:var(--card-bg);border-radius:16px;border:1px solid var(--border);box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:400px;}
         .panel-header{padding:16px 20px;border-bottom:1px solid var(--border);font-weight:700;display:flex;justify-content:space-between;background:var(--card-bg);}
         .panel-body{padding:16px 20px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
-        .source-input-row{display:flex;gap:10px;}
-        .source-input-row input{flex:1;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);}
         textarea{width:100%;min-height:180px;padding:14px 16px;border-radius:12px;border:2px dashed var(--border);background:var(--input-bg);color:var(--text);resize:vertical;font-family:inherit;}
         textarea:focus{outline:none;border-color:var(--accent);}
         .sentence-list{list-style:none;display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;}
         .sentence-item{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:10px;border:1px solid transparent;transition:0.2s;}
-        .sentence-item:hover{background:var(--sentence-hover);}
-        .sentence-item.collected{background:var(--sentence-collected);border-color:#e8c84a;}
+        .sentence-item:hover{background:var(--accent-light);}
+        .sentence-item.collected{background:var(--accent-light);border-color:var(--accent);}
         .star-btn{flex-shrink:0;font-size:1.2rem;cursor:pointer;color:var(--star-empty);}
         .star-btn.filled{color:var(--star-filled);}
         .tabs{display:flex;gap:4px;border-bottom:2px solid var(--border);margin-bottom:4px;}
-        .tab-btn{padding:10px 20px;border:none;background:var(--tab-inactive-bg);color:var(--text-secondary);font-weight:600;border-radius:12px 12px 0 0;cursor:pointer;}
-        .tab-btn.active{background:var(--tab-active-bg);color:var(--accent);border:2px solid var(--border);border-bottom-color:var(--tab-active-bg);}
+        .tab-btn{padding:10px 20px;border:none;background:transparent;color:var(--text-secondary);font-weight:600;border-radius:12px 12px 0 0;cursor:pointer;}
+        .tab-btn.active{background:var(--card-bg);color:var(--accent);border:2px solid var(--border);border-bottom-color:var(--card-bg);}
         .tab-panel{display:none;flex-direction:column;gap:10px;overflow-y:auto;max-height:420px;}
         .tab-panel.active{display:flex;}
         .collection-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;}
-        .card-meta{font-size:0.78rem;color:var(--text-secondary);}
-        .tag{display:inline-block;padding:3px 10px;border-radius:14px;font-size:0.73rem;background:var(--tag-bg);color:var(--tag-text);cursor:pointer;}
+        .tag{display:inline-block;padding:3px 10px;border-radius:14px;font-size:0.73rem;background:var(--tag-bg);color:var(--tag-text);cursor:pointer;margin:2px;user-select:none;}
         .tag.selected{background:var(--accent);color:#fff;}
-        .search-bar-wrapper{display:flex;gap:8px;}
+        .search-bar{display:flex;gap:8px;}
         .search-inner{position:relative;flex:1;}
         .search-inner input{width:100%;padding:9px 36px;border-radius:22px;border:2px solid var(--border);background:var(--input-bg);color:var(--text);}
-        .search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;display:none;}
+        .search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;display:none;color:var(--text);}
         .search-clear.visible{display:block;}
-        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--overlay);z-index:300;display:flex;align-items:center;justify-content:center;}
-        .modal{background:var(--modal-bg);border-radius:16px;padding:24px;width:90%;max-width:480px;box-shadow:var(--shadow-lg);max-height:80vh;overflow-y:auto;}
-        .tag-manage-item{display:inline-flex;align-items:center;gap:5px;background:var(--tag-bg);padding:4px 10px;border-radius:14px;margin:4px;}
-        .tag-delete{cursor:pointer;font-weight:bold;color:var(--danger);background:none;border:none;}
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:300;display:flex;align-items:center;justify-content:center;}
+        .modal{background:var(--card-bg);border-radius:16px;padding:24px;width:90%;max-width:480px;box-shadow:var(--shadow-lg);max-height:80vh;overflow-y:auto;}
         .toast-container{position:fixed;top:20px;right:20px;z-index:500;}
         .toast{background:var(--accent);color:#fff;padding:12px 20px;border-radius:24px;margin-bottom:8px;animation:slideIn 0.3s;}
         @keyframes slideIn{from{transform:translateX(100%);}to{transform:translateX(0);}}
@@ -130,21 +108,21 @@
 
     <div class="main-container">
         <div class="panel">
-            <div class="panel-header"><span class="panel-title">📝 文本输入</span></div>
+            <div class="panel-header"><span>📝 文本输入</span></div>
             <div class="panel-body">
-                <div class="source-input-row">
-                    <input type="text" id="sourceInput" placeholder="书名/来源（可选）">
+                <div style="display:flex;gap:10px;">
+                    <input type="text" id="sourceInput" placeholder="书名/来源（可选）" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);">
                     <button class="btn btn-sm" onclick="clearInput()">清空</button>
                 </div>
-                <textarea id="textInput" placeholder="在此粘贴小说段落，点击「拆分句子」预览..."></textarea>
+                <textarea id="textInput" placeholder="在此粘贴小说段落……"></textarea>
                 <button class="btn btn-primary" id="parseBtn">✨ 拆分句子</button>
                 <div>句子预览：</div>
-                <ul class="sentence-list" id="sentenceList"><li class="empty-state">暂无句子</li></ul>
+                <ul class="sentence-list" id="sentenceList"><li style="opacity:0.7;">暂无句子</li></ul>
             </div>
         </div>
         <div class="panel">
             <div class="panel-header">
-                <span class="panel-title">💎 收藏库</span>
+                <span>💎 收藏库</span>
                 <span><span id="sentCount">0</span> 句 · <span id="wordCount">0</span> 词</span>
             </div>
             <div class="tabs">
@@ -152,13 +130,14 @@
                 <button class="tab-btn" data-tab="words">🔤 好词库</button>
             </div>
             <div class="panel-body">
-                <div class="search-bar-wrapper">
+                <div class="search-bar">
                     <div class="search-inner">
                         <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);">🔍</span>
                         <input type="text" id="searchInput" placeholder="搜索...">
                         <button class="search-clear" id="searchClearBtn">✕</button>
                     </div>
                 </div>
+                <!-- 筛选标签栏 -->
                 <div id="filterTagsRow">
                     <span>标签：</span>
                     <span class="tag" data-tag="">全部</span>
@@ -175,10 +154,11 @@
         <div class="modal">
             <h3>✏️ 编辑收藏</h3>
             <textarea id="editText" rows="3"></textarea>
-            <input type="text" id="editSource" placeholder="来源">
+            <input type="text" id="editSource" placeholder="来源" style="width:100%;margin:8px 0;padding:8px;border-radius:10px;border:1px solid var(--border);">
+            <div><strong>🏷️ 标签（点击选择）</strong></div>
             <div id="editTags" style="margin:8px 0;"></div>
             <textarea id="editNote" placeholder="笔记" rows="2"></textarea>
-            <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
                 <button class="btn" onclick="closeEditModal()">取消</button>
                 <button class="btn btn-primary" onclick="saveEdit()">保存</button>
             </div>
@@ -191,7 +171,7 @@
             <h3>⚙️ 管理标签</h3>
             <div id="tagManageList" style="margin:12px 0;"></div>
             <div style="display:flex;gap:8px;">
-                <input type="text" id="newTagInput" placeholder="新标签名称" style="flex:1;padding:8px 12px;border-radius:20px;border:1px solid var(--border);">
+                <input type="text" id="newTagInput" placeholder="新标签名称" style="flex:1;padding:8px;border-radius:20px;border:1px solid var(--border);">
                 <button class="btn btn-primary btn-sm" id="addTagBtn">➕ 添加</button>
             </div>
             <div style="text-align:right;margin-top:12px;">
@@ -204,8 +184,8 @@
 
     <script>
         (function() {
-            const STORAGE_KEY = 'rc_data';
-            const SETTINGS_KEY = 'rc_settings';
+            const STORAGE_KEY = 'rc_data_v3';
+            const SETTINGS_KEY = 'rc_settings_v3';
             let data = { sentences: [], words: [] };
             let settings = {
                 theme: 'light',
@@ -215,15 +195,13 @@
                 availableTags: ['人物描写', '景物描写', '心理描写', '对话', '哲理感悟', '优美语句']
             };
 
-            function loadData() {
-                try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) data = JSON.parse(raw); } catch (e) {}
-            }
+            // 数据加载
+            function loadData() { try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) data = JSON.parse(raw); } catch (e) {} }
             function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
-            function loadSettings() {
-                try { const raw = localStorage.getItem(SETTINGS_KEY); if (raw) settings = Object.assign(settings, JSON.parse(raw)); } catch (e) {}
-            }
+            function loadSettings() { try { const raw = localStorage.getItem(SETTINGS_KEY); if (raw) settings = Object.assign(settings, JSON.parse(raw)); } catch (e) {} }
             function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
 
+            // 主题
             function applyTheme() {
                 document.documentElement.setAttribute('data-theme', settings.theme);
                 document.querySelector('.theme-toggle').textContent = settings.theme === 'dark' ? '☀️' : '🌙';
@@ -237,7 +215,7 @@
                 setTimeout(() => toast.remove(), 2500);
             }
 
-            // ---------- 拆分句子 ----------
+            // 拆分句子
             function parseSentences() {
                 const text = document.getElementById('textInput').value.trim();
                 if (!text) return showToast('请先粘贴文本');
@@ -263,7 +241,7 @@
                     const collected = collectedSet.has(s);
                     return `<li class="sentence-item ${collected ? 'collected' : ''}">
                         <span class="star-btn ${collected ? 'filled' : ''}" data-text="${escapeHtml(s)}">${collected ? '⭐' : '☆'}</span>
-                        <span class="sentence-text">${escapeHtml(s)}</span></li>`;
+                        <span>${escapeHtml(s)}</span></li>`;
                 }).join('');
                 list.querySelectorAll('.star-btn').forEach(btn => {
                     btn.addEventListener('click', function(e) {
@@ -273,12 +251,10 @@
                             data.sentences = data.sentences.filter(s => s.text.trim() !== text);
                             this.classList.remove('filled'); this.textContent = '☆';
                             this.closest('.sentence-item').classList.remove('collected');
-                            showToast('已取消收藏');
                         } else {
                             data.sentences.unshift({ id: Date.now().toString(36)+Math.random().toString(36).substr(2,5), text, source: document.getElementById('sourceInput').value.trim(), tags: [], note: '', createdAt: Date.now() });
                             this.classList.add('filled'); this.textContent = '⭐';
                             this.closest('.sentence-item').classList.add('collected');
-                            showToast('⭐ 已收藏');
                         }
                         saveData(); updateCounts(); renderCollection();
                     });
@@ -310,12 +286,12 @@
                 return bubble;
             }
             function addWord(word) {
-                if (data.words.find(w => w.text.trim() === word.trim())) return showToast('⚠️ 词语已存在');
+                if (data.words.find(w => w.text.trim() === word.trim())) return showToast('词语已存在');
                 data.words.unshift({ id: Date.now().toString(36)+Math.random().toString(36).substr(2,5), text: word.trim(), source: document.getElementById('sourceInput').value.trim(), tags: [], note: '', createdAt: Date.now() });
                 saveData(); updateCounts(); renderCollection(); showToast(`🔤 已添加「${word.trim()}」`);
             }
 
-            // 收藏库渲染
+            // 渲染收藏库
             function renderCollection() {
                 const query = document.getElementById('searchInput').value.trim().toLowerCase();
                 const tab = settings.currentTab;
@@ -324,12 +300,12 @@
                 if (settings.filterTag) items = items.filter(i => i.tags && i.tags.includes(settings.filterTag));
                 items.sort((a,b) => b.createdAt - a.createdAt);
                 const panel = document.getElementById(tab === 'sentences' ? 'panelSentences' : 'panelWords');
-                if (!items.length) { panel.innerHTML = '<div class="empty-state">暂无收藏</div>'; return; }
+                if (!items.length) { panel.innerHTML = '<div style="opacity:0.7;text-align:center;">暂无收藏</div>'; return; }
                 panel.innerHTML = items.map(item => {
                     const tagsHtml = (item.tags||[]).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
                     return `<div class="collection-card">
-                        <div class="card-text">${highlightText(item.text, query)}</div>
-                        <div class="card-meta">${item.source ? `<span>📖 ${escapeHtml(item.source)}</span>` : ''} ${new Date(item.createdAt).toLocaleString()}</div>
+                        <div><strong>${highlightText(item.text, query)}</strong></div>
+                        <div style="font-size:0.8rem;">${item.source ? '📖 '+escapeHtml(item.source) : ''} ${new Date(item.createdAt).toLocaleString()}</div>
                         ${tagsHtml ? `<div>${tagsHtml}</div>` : ''}
                         <div style="display:flex;gap:6px;">
                             <button class="btn btn-sm" data-action="copy" data-text="${escapeHtml(item.text)}">📋</button>
@@ -359,6 +335,7 @@
                 saveData(); updateCounts(); renderCollection(); showToast('已删除');
             }
 
+            // 编辑弹窗（标签点击修复）
             function openEditModal(type, id) {
                 const item = type === 'sentence' ? data.sentences.find(s => s.id === id) : data.words.find(w => w.id === id);
                 if (!item) return;
@@ -367,9 +344,15 @@
                 document.getElementById('editNote').value = item.note || '';
                 const tagsDiv = document.getElementById('editTags');
                 tagsDiv.innerHTML = settings.availableTags.map(t => {
-                    const sel = (item.tags||[]).includes(t) ? 'selected' : '';
-                    return `<span class="tag ${sel}" data-tag="${t}">${t}</span>`;
+                    const selected = (item.tags||[]).includes(t) ? 'selected' : '';
+                    return `<span class="tag ${selected}" data-tag="${t}">${t}</span>`;
                 }).join('');
+                // 绑定标签点击切换
+                tagsDiv.querySelectorAll('.tag').forEach(tagEl => {
+                    tagEl.addEventListener('click', function() {
+                        this.classList.toggle('selected');
+                    });
+                });
                 document.getElementById('editModal').style.display = 'flex';
                 window._currentEdit = { type, id };
             }
@@ -385,7 +368,7 @@
                     item.source = document.getElementById('editSource').value.trim();
                     item.note = document.getElementById('editNote').value.trim();
                     item.tags = [...document.querySelectorAll('#editTags .tag.selected')].map(el => el.dataset.tag);
-                    saveData(); closeEditModal(); updateCounts(); renderCollection(); showToast('已保存');
+                    saveData(); closeEditModal(); updateCounts(); renderCollection(); showToast('✅ 已保存');
                 }
             };
 
@@ -394,24 +377,44 @@
                 document.getElementById('wordCount').textContent = data.words.length;
             }
 
-            // ---------- 标签管理 ----------
+            // 标签栏渲染（修复“全部”点击）
             function renderFilterTags() {
                 const container = document.getElementById('filterTagsRow');
-                container.querySelectorAll('.tag:not([data-tag=""])').forEach(t => t.remove());
+                // 移除所有动态标签，保留管理按钮
+                container.querySelectorAll('.tag').forEach(t => t.remove());
+                // 重新创建“全部”标签
+                const allTag = document.createElement('span');
+                allTag.className = 'tag';
+                allTag.textContent = '全部';
+                allTag.dataset.tag = '';
+                allTag.addEventListener('click', () => setFilterTag(''));
+                // 插入自定义标签
                 const manageBtn = document.getElementById('manageTagsBtn');
+                container.insertBefore(allTag, manageBtn);
                 settings.availableTags.forEach(tag => {
                     const span = document.createElement('span');
                     span.className = 'tag'; span.textContent = tag; span.dataset.tag = tag;
                     span.addEventListener('click', () => setFilterTag(tag));
                     container.insertBefore(span, manageBtn);
                 });
+                // 高亮当前选中的标签
+                updateFilterTagHighlight();
             }
+
+            function updateFilterTagHighlight() {
+                document.querySelectorAll('#filterTagsRow .tag').forEach(t => {
+                    t.classList.toggle('selected', t.dataset.tag === settings.filterTag);
+                });
+            }
+
             function setFilterTag(tag) {
-                settings.filterTag = tag; saveSettings();
-                document.querySelectorAll('#filterTagsRow .tag').forEach(t => t.classList.toggle('selected', t.dataset.tag === tag));
+                settings.filterTag = tag;
+                saveSettings();
+                updateFilterTagHighlight();
                 renderCollection();
             }
 
+            // 标签管理弹窗
             document.getElementById('manageTagsBtn').addEventListener('click', () => {
                 document.getElementById('tagManagerModal').style.display = 'flex';
                 renderTagManageList();
@@ -423,11 +426,11 @@
             function renderTagManageList() {
                 const list = document.getElementById('tagManageList');
                 list.innerHTML = settings.availableTags.map(tag => `
-                    <span class="tag-manage-item">
+                    <span style="display:inline-flex;align-items:center;gap:5px;background:var(--tag-bg);padding:4px 10px;border-radius:14px;margin:4px;">
                         ${escapeHtml(tag)}
-                        <button class="tag-delete" data-tag="${escapeHtml(tag)}">✕</button>
+                        <button style="background:none;border:none;cursor:pointer;color:var(--danger);font-weight:bold;" data-tag="${escapeHtml(tag)}">✕</button>
                     </span>`).join('');
-                list.querySelectorAll('.tag-delete').forEach(btn => {
+                list.querySelectorAll('button').forEach(btn => {
                     btn.addEventListener('click', function() {
                         const tag = this.dataset.tag;
                         if (!confirm(`删除标签「${tag}」？所有收藏中的此标签也会移除。`)) return;
@@ -463,6 +466,7 @@
                 });
             });
 
+            // 搜索
             document.getElementById('searchInput').addEventListener('input', renderCollection);
             document.getElementById('searchClearBtn').addEventListener('click', () => {
                 document.getElementById('searchInput').value = ''; renderCollection();
@@ -497,7 +501,7 @@
             };
             window.clearInput = () => {
                 document.getElementById('textInput').value = '';
-                document.getElementById('sentenceList').innerHTML = '<li class="empty-state">暂无句子</li>';
+                document.getElementById('sentenceList').innerHTML = '<li style="opacity:0.7;">暂无句子</li>';
             };
 
             document.getElementById('parseBtn').addEventListener('click', parseSentences);
@@ -508,6 +512,10 @@
             if (settings.currentTab) {
                 document.querySelector(`.tab-btn[data-tab="${settings.currentTab}"]`).click();
             }
+            // 监听搜索框清空按钮显示
+            document.getElementById('searchInput').addEventListener('input', function() {
+                document.getElementById('searchClearBtn').classList.toggle('visible', this.value.trim().length > 0);
+            });
         })();
     </script>
 </body>
